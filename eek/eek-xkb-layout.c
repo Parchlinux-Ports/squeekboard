@@ -360,7 +360,7 @@ eek_xkb_layout_finalize (GObject *object)
     g_free (priv->names.keycodes);
     g_free (priv->names.geometry);
     g_free (priv->names.symbols);
-    XkbFreeKeyboard (priv->xkb, 0, TRUE);	/* free_all = TRUE */
+    XkbFreeKeyboard (priv->xkb, 0, TRUE);   /* free_all = TRUE */
     G_OBJECT_CLASS (eek_xkb_layout_parent_class)->finalize (object);
 }
 

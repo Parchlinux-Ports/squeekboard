@@ -69,4 +69,4 @@ gboolean   eek_xkb_layout_set_names (EekXkbLayout         *layout,
                                      GError              **error);
 
 G_END_DECLS
-#endif				/* #ifndef EEK_XKB_LAYOUT_H */
+#endif              /* #ifndef EEK_XKB_LAYOUT_H */

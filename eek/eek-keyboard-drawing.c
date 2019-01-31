@@ -40,8 +40,8 @@ point_line_distance (gdouble ax, gdouble ay, gdouble nx, gdouble ny)
 
 static void
 normal_form (gdouble ax, gdouble ay,
-	     gdouble bx, gdouble by,
-	     gdouble * nx, gdouble * ny, gdouble * d)
+             gdouble bx, gdouble by,
+             gdouble * nx, gdouble * ny, gdouble * d)
 {
     gdouble l;
 
@@ -58,7 +58,7 @@ normal_form (gdouble ax, gdouble ay,
 
 static void
 inverse (gdouble a, gdouble b, gdouble c, gdouble d,
-	 gdouble * e, gdouble * f, gdouble * g, gdouble * h)
+         gdouble * e, gdouble * f, gdouble * g, gdouble * h)
 {
     gdouble det;
 
@@ -71,8 +71,8 @@ inverse (gdouble a, gdouble b, gdouble c, gdouble d,
 }
 
 static void
-multiply (gdouble a, gdouble b, gdouble c, gdouble d,
-	  gdouble e, gdouble f, gdouble * x, gdouble * y)
+multiply (gdouble a, gdouble b, gdouble c,   gdouble d,
+          gdouble e, gdouble f, gdouble * x, gdouble * y)
 {
     *x = a * e + b * f;
     *y = c * e + d * f;
@@ -80,7 +80,7 @@ multiply (gdouble a, gdouble b, gdouble c, gdouble d,
 
 static void
 intersect (gdouble n1x, gdouble n1y, gdouble d1,
-	   gdouble n2x, gdouble n2y, gdouble d2, gdouble * x, gdouble * y)
+           gdouble n2x, gdouble n2y, gdouble d2, gdouble * x, gdouble * y)
 {
     gdouble e, f, g, h;
 
@@ -94,8 +94,8 @@ intersect (gdouble n1x, gdouble n1y, gdouble d1,
  */
 static void
 rounded_corner (cairo_t * cr,
-		gdouble bx, gdouble by,
-		gdouble cx, gdouble cy, gdouble radius)
+                gdouble bx, gdouble by,
+                gdouble cx, gdouble cy, gdouble radius)
 {
     gdouble ax, ay;
     gdouble n1x, n1y, d1;

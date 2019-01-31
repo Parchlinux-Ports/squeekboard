@@ -69,13 +69,13 @@ struct _EekXklLayoutPrivate
  *  Any ideas on architectural improvements are WELCOME
  */
 extern gboolean xkl_xkb_config_native_prepare (XklEngine * engine,
-					       const XklConfigRec * data,
-					       XkbComponentNamesPtr
-					       component_names);
+                                               const XklConfigRec * data,
+                                               XkbComponentNamesPtr
+                                               component_names);
 
 extern void xkl_xkb_config_native_cleanup (XklEngine * engine,
-					   XkbComponentNamesPtr
-					   component_names);
+                                           XkbComponentNamesPtr
+                                           component_names);
 
 static gboolean set_xkb_component_names (EekXklLayout *layout,
                                          XklConfigRec *config);

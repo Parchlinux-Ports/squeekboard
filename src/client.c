@@ -1148,7 +1148,7 @@ void
 client_disable_xtest (Client *client)
 {
     if (client->xkb) {
-        XkbFreeKeyboard (client->xkb, 0, TRUE);	/* free_all = TRUE */
+        XkbFreeKeyboard (client->xkb, 0, TRUE); /* free_all = TRUE */
         client->xkb = NULL;
     }
 }

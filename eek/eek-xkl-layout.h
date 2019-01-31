@@ -94,4 +94,4 @@ gboolean   eek_xkl_layout_get_option      (EekXklLayout *layout,
                                            const gchar  *option);
 
 G_END_DECLS
-#endif				/* #ifndef EEK_XKL_LAYOUT_H */
+#endif              /* #ifndef EEK_XKL_LAYOUT_H */
