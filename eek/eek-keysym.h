@@ -25,7 +25,7 @@
 #ifndef EEK_KEYSYM_H
 #define EEK_KEYSYM_H 1
 
-#include <X11/XKBlib.h>
+//#include <X11/XKBlib.h>   //luci
 #include "eek-symbol.h"
 
 G_BEGIN_DECLS

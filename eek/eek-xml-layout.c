@@ -59,7 +59,7 @@ struct _EekXmlLayoutPrivate
 
 G_DEFINE_BOXED_TYPE(EekXmlKeyboardDesc, eek_xml_keyboard_desc, eek_xml_keyboard_desc_copy, eek_xml_keyboard_desc_free);
 
-#define BUFSIZE 8192
+#define BUFSIZE    8192
 
 static GList        *parse_keyboards (const gchar         *path,
                                       GError             **error);
@@ -1021,10 +1021,10 @@ eek_xml_layout_class_init (EekXmlLayoutClass *klass)
     gobject_class->finalize = eek_xml_layout_finalize;
 
     pspec = g_param_spec_string ("id",
-                                 "ID",
-                                 "ID",
-                                 NULL,
-                                 G_PARAM_CONSTRUCT_ONLY |
+                 "ID",
+                 "ID",
+                 NULL,
+                 G_PARAM_CONSTRUCT_ONLY |
                                  G_PARAM_READWRITE);
     g_object_class_install_property (gobject_class, PROP_ID, pspec);
 }

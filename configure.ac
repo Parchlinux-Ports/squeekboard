@@ -225,7 +225,6 @@ examples/Makefile
 examples/simple-client/Makefile
 eek/eek-${EEK_API_VERSION}.pc
 eek/eek-gtk-${EEK_API_VERSION}.pc
-eek/eek-xkl-${EEK_API_VERSION}.pc
 eekboard/eekboard-${EEK_API_VERSION}.pc])
 AC_OUTPUT
 AC_MSG_RESULT([

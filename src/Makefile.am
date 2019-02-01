@@ -29,7 +29,6 @@ eekboard_CFLAGS =					\
 	-I$(top_srcdir)					\
 	$(GIO2_CFLAGS)					\
 	$(GTK_CFLAGS)					\
-	$(XKB_CFLAGS)					\
 	$(LIBXKLAVIER_CFLAGS)				\
 	-DLIBEXECDIR=\"$(libexecdir)\"			\
 	$(NULL)
@@ -37,10 +36,8 @@ eekboard_CFLAGS =					\
 eekboard_LDADD =				\
 	$(top_builddir)/eekboard/libeekboard.la	\
 	$(top_builddir)/eek/libeek.la		\
-	$(top_builddir)/eek/libeek-xkl.la	\
 	$(GIO2_LIBS)				\
 	$(GTK_LIBS)				\
-	$(XKB_LIBS)				\
 	$(LIBXKLAVIER_LIBS)			\
 	$(NULL)
 
@@ -75,7 +72,6 @@ eekboard_server_LDADD =				\
 	$(top_builddir)/eekboard/libeekboard.la	\
 	$(top_builddir)/eek/libeek.la		\
 	$(top_builddir)/eek/libeek-gtk.la	\
-	$(top_builddir)/eek/libeek-xkl.la	\
 	$(GIO2_LIBS)				\
 	$(GTK_LIBS)				\
 	$(LIBXKLAVIER_LIBS)			\
@@ -101,7 +97,6 @@ eekboard_setup_CFLAGS = \
 	-I$(top_srcdir)					\
 	$(GIO2_CFLAGS)					\
 	$(GTK_CFLAGS)					\
-	$(XKB_CFLAGS)					\
 	$(LIBXKLAVIER_CFLAGS)				\
 	-DPKGDATADIR=\"$(pkgdatadir)\"			\
 	$(NULL)

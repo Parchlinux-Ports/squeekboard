@@ -105,7 +105,6 @@ expand_content_files=eek-overview.xml
 GTKDOC_CFLAGS = $(GIO2_CFLAGS)
 GTKDOC_LIBS = $(top_builddir)/eek/libeek.la \
 	$(top_builddir)/eek/libeek-gtk.la \
-	$(top_builddir)/eek/libeek-xkl.la \
 	$(GIO2_LIBS) \
 	$(GTK_LIBS) \
 	$(LIBXKLAVIER_LIBS)

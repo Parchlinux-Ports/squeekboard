@@ -63,7 +63,6 @@ libeekboard_la_CFLAGS =					\
 	$(NULL)
 libeekboard_la_LIBADD =				\
 	$(top_builddir)/eek/libeek.la		\
-	$(top_builddir)/eek/libeek-xkl.la	\
 	$(GIO2_LIBS)				\
 	$(LIBXKLAVIER_LIBS)			\
 	$(NULL)

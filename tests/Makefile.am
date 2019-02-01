@@ -27,6 +27,6 @@ eek_simple_test_SOURCES = eek-simple-test.c
 eek_simple_test_LDADD = $(top_builddir)/eek/libeek.la $(GIO2_LIBS)
 
 eek_xml_test_SOURCES = eek-xml-test.c
-eek_xml_test_LDADD = $(top_builddir)/eek/libeek.la $(top_builddir)/eek/libeek-xkl.la $(GIO2_LIBS) $(GTK_LIBS)
+eek_xml_test_LDADD = $(top_builddir)/eek/libeek.la $(GIO2_LIBS) $(GTK_LIBS)
 
 -include $(top_srcdir)/git.mk

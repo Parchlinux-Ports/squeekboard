@@ -25,20 +25,16 @@ dist_vapi_DATA =				\
 	eek-$(EEK_API_VERSION).deps		\
 	eek-gtk-$(EEK_API_VERSION).vapi		\
 	eek-gtk-$(EEK_API_VERSION).deps		\
-	eek-xkl-$(EEK_API_VERSION).vapi		\
-	eek-xkl-$(EEK_API_VERSION).deps		\
 	$(NULL)
 
 EXTRA_DIST =					\
 	Eek-$(EEK_API_VERSION).metadata		\
 	EekGtk-$(EEK_API_VERSION).metadata	\
-	EekXkl-$(EEK_API_VERSION).metadata	\
 	$(NULL)
 
 GITIGNOREFILES = \
 	eek-$(EEK_API_VERSION).vapi		\
 	eek-gtk-$(EEK_API_VERSION).vapi		\
-	eek-xkl-$(EEK_API_VERSION).vapi		\
 	$(NULL)
 
 maintainer-clean-local:
@@ -72,20 +68,20 @@ eek-gtk-$(EEK_API_VERSION).vapi: $(eek_gtk_vapi_deps)
 		--metadatadir=$(srcdir)	\
 		$(top_builddir)/eek/EekGtk-$(EEK_API_VERSION).gir
 
-eek_xkl_vapi_deps =						\
-	$(srcdir)/EekXkl-$(EEK_API_VERSION).metadata		\
-	|							\
-	$(top_builddir)/eek/EekXkl-$(EEK_API_VERSION).gir	\
-	$(NULL)
-
-eek-xkl-$(EEK_API_VERSION).vapi: $(eek_xkl_vapi_deps)
-	$(VAPIGEN_V)$(VAPIGEN) \
-		--vapidir=$(builddir) \
-		--library eek-xkl-$(EEK_API_VERSION) \
-		--pkg eek-$(EEK_API_VERSION) \
-		--pkg gio-2.0 \
-		--metadatadir=$(srcdir) \
-		$(top_builddir)/eek/EekXkl-$(EEK_API_VERSION).gir
+# eek_xkl_vapi_deps =						\
+# 	$(srcdir)/EekXkl-$(EEK_API_VERSION).metadata		\
+# 	|							\
+# 	$(top_builddir)/eek/EekXkl-$(EEK_API_VERSION).gir	\
+# 	$(NULL)
+# 
+# eek-xkl-$(EEK_API_VERSION).vapi: $(eek_xkl_vapi_deps)
+# 	$(VAPIGEN_V)$(VAPIGEN) \
+# 		--vapidir=$(builddir) \
+# 		--library eek-xkl-$(EEK_API_VERSION) \
+# 		--pkg eek-$(EEK_API_VERSION) \
+# 		--pkg gio-2.0 \
+# 		--metadatadir=$(srcdir) \
+# 		$(top_builddir)/eek/EekXkl-$(EEK_API_VERSION).gir
 
 # set up the verbosity rules to avoid some build noise
 VAPIGEN_V = $(VAPIGEN_V_$(V))

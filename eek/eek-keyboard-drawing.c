@@ -57,7 +57,7 @@ normal_form (gdouble ax, gdouble ay,
 }
 
 static void
-inverse (gdouble a, gdouble b, gdouble c, gdouble d,
+inverse (gdouble a,   gdouble b,   gdouble c,   gdouble d,
          gdouble * e, gdouble * f, gdouble * g, gdouble * h)
 {
     gdouble det;
@@ -71,7 +71,7 @@ inverse (gdouble a, gdouble b, gdouble c, gdouble d,
 }
 
 static void
-multiply (gdouble a, gdouble b, gdouble c,   gdouble d,
+multiply (gdouble a, gdouble b, gdouble c, gdouble d,
           gdouble e, gdouble f, gdouble * x, gdouble * y)
 {
     *x = a * e + b * f;
