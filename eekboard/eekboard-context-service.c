@@ -31,7 +31,7 @@
 
 #include "eekboard/eekboard-context-service.h"
 #include "eekboard/eekboard-xklutil.h"
-#include "eek/eek-xkl.h"
+//#include "eek/eek-xkl.h"      //x11_stub
 
 #define CSW 640
 #define CSH 480
@@ -173,7 +173,7 @@ eekboard_context_service_real_create_keyboard (EekboardContextService *self,
             display = XOpenDisplay (NULL);
 
         error = NULL;
-        layout = eek_xkl_layout_new (display, &error);
+        //layout = eek_xkl_layout_new (display, &error);    //x11_stub
         if (layout == NULL) {
             g_warning ("can't create keyboard %s: %s",
                        keyboard_type, error->message);
@@ -181,10 +181,14 @@ eekboard_context_service_real_create_keyboard (EekboardContextService *self,
             return NULL;
         }
 
+        /*
+        //x11_stub
         if (!eek_xkl_layout_set_config (EEK_XKL_LAYOUT(layout), rec)) {
             g_object_unref (layout);
             return NULL;
         }
+        */
+
     } else {
         error = NULL;
         layout = eek_xml_layout_new (keyboard_type, &error);

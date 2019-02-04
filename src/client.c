@@ -93,7 +93,7 @@ struct _Client {
 
 #ifdef HAVE_XTEST
     guint modifier_keycodes[8]; 
-    XkbDescRec *xkb;
+    //XkbDescRec *xkb;  //x11_stub
 #endif  /* HAVE_XTEST */
 
     GSettings *settings;
@@ -858,6 +858,8 @@ get_replaced_keycode (Client *client)
 {
     guint keycode;
 
+    /*
+    //x11_stub_start
     for (keycode = client->xkb->max_key_code;
          keycode >= client->xkb->min_key_code;
          --keycode) {
@@ -867,6 +869,8 @@ get_replaced_keycode (Client *client)
             return keycode;
         }
     }
+    //x11_stub_end
+    */
 
     return 0;
 }
@@ -889,6 +893,8 @@ replace_keycode (Client *client,
     int keysyms_per_keycode;
     KeySym *syms;
 
+    /*
+    //x11_stub_start
     g_return_val_if_fail (client->xkb->min_key_code <= keycode &&
                           keycode <= client->xkb->max_key_code,
                           FALSE);
@@ -901,6 +907,8 @@ replace_keycode (Client *client,
     XSync (xdisplay, False);
     XFree (syms);
     *keysym = old_keysym;
+    //x11_stub_end
+    */
 
     return TRUE;
 }
@@ -1017,7 +1025,9 @@ send_fake_key_events (Client    *client,
     if (eek_symbol_is_modifier (symbol))
         return;
 
-    /* If symbol is a text, convert chars in it to keysym */
+    /*
+    //x11_stub_start
+    // If symbol is a text, convert chars in it to keysym
     if (EEK_IS_TEXT(symbol)) {
         const gchar *utf8 = eek_text_get_text (EEK_TEXT(symbol));
         glong items_written;
@@ -1041,6 +1051,8 @@ send_fake_key_events (Client    *client,
         g_free (ucs4);
         return;
     }
+    //x11_stub_end
+    */
 
     if (EEK_IS_KEYSYM(symbol)) {
         guint xkeysym = eek_keysym_get_xkeysym (EEK_KEYSYM(symbol));
@@ -1131,9 +1143,13 @@ client_enable_xtest (Client *client)
         return FALSE;
     }
 
+    /*
+    //x11_stub_start
     if (!client->xkb)
         client->xkb = XkbGetMap (xdisplay, XkbKeySymsMask, XkbUseCoreKbd);
     g_assert (client->xkb);
+    //x11_stub_end
+    */
 
     update_modifier_keycodes (client);
 
@@ -1147,9 +1163,13 @@ client_enable_xtest (Client *client)
 void
 client_disable_xtest (Client *client)
 {
+    /*
+    //x11_stub_start
     if (client->xkb) {
-        XkbFreeKeyboard (client->xkb, 0, TRUE);	/* free_all = TRUE */
+        XkbFreeKeyboard (client->xkb, 0, TRUE);	// free_all = TRUE 
         client->xkb = NULL;
     }
+    //x11_stub+end
+    */
 }
 #endif  /* HAVE_XTEST */
