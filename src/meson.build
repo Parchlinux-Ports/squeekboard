@@ -46,7 +46,6 @@ sources = [
 
 cc = meson.get_compiler('c')
 
-
 deps = [
 #  dependency('glib-2.0', version: '>=2.26.0'),
   dependency('gio-2.0', version: '>=2.26.0'),
@@ -56,19 +55,19 @@ deps = [
   dependency('xkbcommon'),
   cc.find_library('m'),
   cc.find_library('rt'),
+  cc.find_library('libstd-79f126b09196cdf2'),
 #  dependency('libxklavier'), # FIXME remove
 ]
 
 # Replacement for eekboard-server
-rslib = library(
+rslib = static_library(
   'rslib',
-  sources:['imservice.rs'],
-  install: true
+  sources: ['imservice.rs']
 )
 
 squeekboard = executable('squeekboard',
   sources,
-  link_with: rslib,
+  link_with: [rslib],
   include_directories: [include_directories('..'), include_directories('../eek')],
   dependencies: deps,
   install: true,
