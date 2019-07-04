@@ -522,15 +522,20 @@ render_locked_key (GtkWidget *widget,
     EekGtkKeyboard        *self = EEK_GTK_KEYBOARD (widget);
     EekGtkKeyboardPrivate *priv = eek_gtk_keyboard_get_instance_private (self);
     EekBounds bounds;
-    cairo_t *cr;
 
-    cr = gdk_cairo_create (GDK_DRAWABLE (gtk_widget_get_window (widget)));
+    GdkWindow         *window  = gtk_widget_get_window (widget);
+    cairo_region_t    *region  = gdk_window_get_clip_region (window);
+    GdkDrawingContext *context = gdk_window_begin_draw_frame (window, region);
+    cairo_t           *cr      = gdk_drawing_context_get_cairo_context (context);
 
     eek_renderer_get_key_bounds (priv->renderer, key, &bounds, TRUE);
+
     cairo_translate (cr, bounds.x, bounds.y);
     eek_renderer_render_key (priv->renderer, cr, key, 1.0, TRUE);
 
-    cairo_destroy (cr);
+    gdk_window_end_draw_frame (window, context);
+
+    cairo_region_destroy(region);
 }
 
 static void
@@ -540,12 +545,15 @@ render_released_key (GtkWidget *widget,
     EekGtkKeyboard        *self = EEK_GTK_KEYBOARD (widget);
     EekGtkKeyboardPrivate *priv = eek_gtk_keyboard_get_instance_private (self);
     EekBounds bounds, large_bounds;
-    cairo_t *cr;
 
-    cr = gdk_cairo_create (GDK_DRAWABLE (gtk_widget_get_window (widget)));
+    GdkWindow         *window  = gtk_widget_get_window (widget);
+    cairo_region_t    *region  = gdk_window_get_clip_region (window);
+    GdkDrawingContext *context = gdk_window_begin_draw_frame (window, region);
+    cairo_t           *cr      = gdk_drawing_context_get_cairo_context (context);
 
     eek_renderer_get_key_bounds (priv->renderer, key, &bounds, TRUE);
     magnify_bounds (widget, &bounds, &large_bounds, 2.0);
+
     cairo_rectangle (cr,
                      large_bounds.x,
                      large_bounds.y,
@@ -559,7 +567,10 @@ render_released_key (GtkWidget *widget,
     cairo_clip (cr);
 
     eek_renderer_render_keyboard (priv->renderer, cr);
-    cairo_destroy (cr);
+
+    gdk_window_end_draw_frame (window, context);
+
+    cairo_region_destroy(region);
 }
 
 static void
