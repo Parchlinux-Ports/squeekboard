@@ -4,10 +4,17 @@ dbus_src = gnome.gdbus_codegen(
     join_paths(dbusdir, 'sm.puri.OSK0.xml')
 )
 
+squeek_enum_headers = [
+  'squeek-input-method.h',
+]
+
+squeek_enums = gnome.mkenums_simple('squeek-enumtypes', sources: squeek_enum_headers)
+
 sources = [
   'imservice.c',
   'server-context-service.c',
   'server-main.c',
+  'squeek-input-method.c',
   'wayland.c',
   '../eek/eek.c',
   '../eek/eek-container.c',
@@ -33,6 +40,7 @@ sources = [
   '../eek/layersurface.c',
   dbus_src,
   enums,
+  squeek_enums,
   keysym_entries,
   marshalers,
   '../eekboard/keymap.c',

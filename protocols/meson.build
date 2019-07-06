@@ -11,6 +11,7 @@ gen_scanner_client_code = generator(wl_scanner,
 
 wl_protos = [
   wl_protocol_dir + '/stable/xdg-shell/xdg-shell.xml',
+  wl_protocol_dir + '/unstable/text-input/text-input-unstable-v3.xml',
   'wlr-layer-shell-unstable-v1.xml',
   'virtual-keyboard-unstable-v1.xml',
   'input-method-unstable-v2.xml',
