@@ -78,12 +78,15 @@ replace_keycode (SeatEmitter *emitter,
                  guint   keycode,
                  guint  *keysym)
 {
+#if 0  // ===== @raisins: -Wunused-variable =====
     GdkDisplay *display = gdk_display_get_default ();
     //Display *xdisplay = GDK_DISPLAY_XDISPLAY (display);
     guint old_keysym;
     int keysyms_per_keycode;
-    KeySym *syms;
-return TRUE; // FIXME: no xkb allocated at the moment, pretending all is fine
+#endif // ===== @raisins: -Wunused-variable =====
+
+    return TRUE; // FIXME: no xkb allocated at the moment, pretending all is fine
+
     g_return_val_if_fail (emitter->xkb->min_key_code <= keycode &&
                           keycode <= emitter->xkb->max_key_code,
                           FALSE);

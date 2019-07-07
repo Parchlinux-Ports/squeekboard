@@ -84,7 +84,9 @@ struct _EekboardContextServicePrivate {
 
 G_DEFINE_TYPE (EekboardContextService, eekboard_context_service, G_TYPE_OBJECT);
 
+#if 0  // ===== @raisins: -Wunused-variable =====
 static Display *display = NULL;
+#endif // ===== @raisins: -Wunused-variable =====
 
 static EekKeyboard *
 eekboard_context_service_real_create_keyboard (EekboardContextService *self,
@@ -483,6 +485,7 @@ eekboard_context_service_init (EekboardContextService *self)
     }
 }
 
+#if 0  // ===== @raisins: -Wunused-function =====
 static gboolean on_repeat_timeout (EekboardContextService *context);
 
 static gboolean
@@ -501,7 +504,9 @@ on_repeat_timeout (EekboardContextService *context)
 
     return FALSE;
 }
+#endif // ===== @raisins: -Wunused-function =====
 
+#if 0  // ===== @raisins: -Wunused-function =====
 static gboolean
 on_repeat_timeout_init (EekboardContextService *context)
 {
@@ -527,6 +532,7 @@ on_repeat_timeout_init (EekboardContextService *context)
 
     return FALSE;
 }
+#endif // ===== @raisins: -Wunused-function =====
 
 /**
  * eekboard_context_service_enable:
