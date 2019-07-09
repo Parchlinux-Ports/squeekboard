@@ -1,7 +1,7 @@
-/* 
+/*
  * Copyright (C) 2010-2011 Daiki Ueno <ueno@unixuser.org>
  * Copyright (C) 2010-2011 Red Hat, Inc.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -84,9 +84,9 @@ struct _EekboardContextServicePrivate {
 
 G_DEFINE_TYPE (EekboardContextService, eekboard_context_service, G_TYPE_OBJECT);
 
-#if 0  // ===== @raisins: -Wunused-variable =====
+#if 0  // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-variable =====
 static Display *display = NULL;
-#endif // ===== @raisins: -Wunused-variable =====
+#endif // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-variable =====
 
 static EekKeyboard *
 eekboard_context_service_real_create_keyboard (EekboardContextService *self,
@@ -485,7 +485,7 @@ eekboard_context_service_init (EekboardContextService *self)
     }
 }
 
-#if 0  // ===== @raisins: -Wunused-function =====
+#if 0  // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-function =====
 static gboolean on_repeat_timeout (EekboardContextService *context);
 
 static gboolean
@@ -504,16 +504,16 @@ on_repeat_timeout (EekboardContextService *context)
 
     return FALSE;
 }
-#endif // ===== @raisins: -Wunused-function =====
+#endif // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-function =====
 
-#if 0  // ===== @raisins: -Wunused-function =====
+#if 0  // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-function =====
 static gboolean
 on_repeat_timeout_init (EekboardContextService *context)
 {
     /* FIXME: clear modifiers for further key repeat; better not
        depend on modifier behavior is LATCH */
     eek_keyboard_set_modifiers (context->priv->keyboard, 0);
-    
+
     /* reschedule repeat timeout only when "repeat" option is set */
     /* TODO: org.gnome.desktop.input-sources doesn't have repeat info.
      * In addition, repeat is only useful when the keyboard is not in text
@@ -532,7 +532,7 @@ on_repeat_timeout_init (EekboardContextService *context)
 
     return FALSE;
 }
-#endif // ===== @raisins: -Wunused-function =====
+#endif // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-function =====
 
 /**
  * eekboard_context_service_enable:

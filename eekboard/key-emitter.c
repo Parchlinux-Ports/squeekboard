@@ -78,12 +78,12 @@ replace_keycode (SeatEmitter *emitter,
                  guint   keycode,
                  guint  *keysym)
 {
-#if 0  // ===== @raisins: -Wunused-variable =====
+#if 0  // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-variable =====
     GdkDisplay *display = gdk_display_get_default ();
     //Display *xdisplay = GDK_DISPLAY_XDISPLAY (display);
     guint old_keysym;
     int keysyms_per_keycode;
-#endif // ===== @raisins: -Wunused-variable =====
+#endif // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-variable =====
 
     return TRUE; // FIXME: no xkb allocated at the moment, pretending all is fine
 

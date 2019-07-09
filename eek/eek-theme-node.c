@@ -89,11 +89,11 @@ static void eek_theme_node_finalize           (GObject                 *object);
 
 static const EekColor BLACK_COLOR = { 0, 0, 0, 0xff };
 static const EekColor TRANSPARENT_COLOR = { 0, 0, 0, 0 };
-#if 0  // ===== @raisins: -Wunused-const-variable =====
+#if 0  // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-const-variable =====
 static const EekColor DEFAULT_SUCCESS_COLOR = { 0x4e, 0x9a, 0x06, 0xff };
 static const EekColor DEFAULT_WARNING_COLOR = { 0xf5, 0x79, 0x3e, 0xff };
 static const EekColor DEFAULT_ERROR_COLOR = { 0xcc, 0x00, 0x00, 0xff };
-#endif // ===== @raisins: -Wunused-const-variable =====
+#endif // ===== REMOVAL NOTICE ==== expires by: 2019-08-20 -Wunused-const-variable =====
 
 static void
 eek_theme_node_init (EekThemeNode *self)
