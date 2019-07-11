@@ -219,8 +219,6 @@ set_level_from_modifiers (EekKeyboard *self)
     gint level = ((priv->modifiers & priv->alt_gr_mask) ? 2 : 0) |
                  ((priv->modifiers & EEK_SHIFT_MASK) ? 1 : 0);
 
-    g_debug("XXXX: %i %i", priv->old_level, level);
-
     switch (priv->old_level) {
     case VIEW_LETTERS_UPPER:
     {
