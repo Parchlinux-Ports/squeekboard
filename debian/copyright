@@ -6,15 +6,66 @@ Files: *
 Copyright: 2010-2011 Daiki Ueno <ueno@unixuser.org>
            2010-2011 Red Hat, Inc.
            2019 Purism SPC
+           2019 Hysterical Raisins <sybolt-dev@xs4all.nl>
+License: GPL-3+
+
+Files: eek/eek.c
+       eek/eek-container.c
+       eek/eek-container.h
+       eek/eek-element.c
+       eek/eek-element.h
+       eek/eek-gtk-keyboard.c
+       eek/eek-gtk-keyboard.h
+       eek/eek-key.c
+       eek/eek-key.h
+       eek/eek-keysym.c
+       eek/eek-keysym.h
+       eek/eek-layout.c
+       eek/eek-layout.h
+       eek/eek-renderer.c
+       eek/eek-renderer.h
+       eek/eek-section.c
+       eek/eek-section.h
+       eek/eek-symbol.c
+       eek/eek-symbol.h
+       eek/eek-text.c
+       eek/eek-text.h
+       eek/eek-xkb-layout.c
+       eek/eek-xkb-layout.h
+       eek/eek-xkl-layout.c
+       eek/eek-xkl-layout.h
+       eek/eek-xml-layout.c
+       eek/eek-xml-layout.c
+       eek/eek-xml-layout.h
+       eekboard/eekboard-client.c
+       eekboard/eekboard-client.h
+       eekboard/eekboard-context.c
+       eekboard/eekboard-context.h
+       eekboard/eekboard-context-service.c
+       eekboard/eekboard-service.c
+       eekboard/eekboard-service.h
+Copyright: 2010-2011 Daiki Ueno <ueno@unixuser.org>
+           2010-2011 Red Hat, Inc.
+           2019 Purism SPC
+           2019 Hysterical Raisins <sybolt-dev@xs4all.nl>
 License: GPL-3+
 
 Files: eek/layersurface.c
        src/wayland.c
        src/key-emitter.c
        meson.build
-       src/meson.build
        po/meson.build
 Copyright: 2018-2019 Purism SPC
+License: GPL-3+
+
+Files: data/meson.build
+       data/squeekboard.gresources.xml
+       data/style.css
+       src/imservice.c
+       src/meson.build
+       src/server-context-service.c
+Copyright: 2019 Purism SPC
+           2019 Hysterical Raisins <sybolt-dev@xs4all.nl>
 License: GPL-3+
 
 Files: eekboard/keymap.c
@@ -71,3 +122,4 @@ License: GPL-3+
  .
  On Debian systems, the complete text of the GNU General
  Public License version 3 can be found in "/usr/share/common-licenses/GPL-3".
+
