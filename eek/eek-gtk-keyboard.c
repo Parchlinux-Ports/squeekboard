@@ -23,12 +23,10 @@
  * @short_description: a #GtkWidget displaying #EekKeyboard
  */
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif  /* HAVE_CONFIG_H */
 
-#ifdef HAVE_LIBCANBERRA
-#include <canberra-gtk.h>
+#ifdef HAVE_GSOUND
+#include <gsound.h>
 #endif
 
 #include <math.h>
@@ -58,6 +56,9 @@ typedef struct _EekGtkKeyboardPrivate
     EekRenderer *renderer;
     EekKeyboard *keyboard;
     EekTheme *theme;
+#ifdef HAVE_GSOUND
+    GSoundContext *sound_ctx;
+#endif
 
     GdkEventSequence *sequence; // unowned reference
 } EekGtkKeyboardPrivate;
@@ -438,7 +439,16 @@ eek_gtk_keyboard_class_init (EekGtkKeyboardClass *klass)
 static void
 eek_gtk_keyboard_init (EekGtkKeyboard *self)
 {
-    /* void */
+#if HAVE_GSOUND
+    EekGtkKeyboardPrivate *priv = eek_gtk_keyboard_get_instance_private (self);
+    GError *err = NULL;
+
+    priv->sound_ctx = gsound_context_new(NULL, &err);
+    if (!priv->sound_ctx) {
+        g_warning ("GSound init failed: %s", err->message);
+        g_clear_error (&err);
+    }
+#endif
 }
 
 /**
@@ -567,12 +577,12 @@ on_key_pressed (EekKey      *key,
     render_pressed_key (GTK_WIDGET(self), key);
     gtk_widget_queue_draw (GTK_WIDGET(self));
 
-#if HAVE_LIBCANBERRA
-    ca_gtk_play_for_widget (widget, 0,
-                            CA_PROP_EVENT_ID, "button-pressed",
-                            CA_PROP_EVENT_DESCRIPTION, "virtual key pressed",
-                            CA_PROP_APPLICATION_ID, "org.fedorahosted.Eekboard",
-                            NULL);
+#if HAVE_GSOUND
+    g_return_if_fail (GSOUND_IS_CONTEXT (priv->sound_ctx));
+    gsound_context_play_simple(priv->sound_ctx, NULL, NULL,
+                               GSOUND_ATTR_EVENT_ID, "button-pressed",
+                               GSOUND_ATTR_EVENT_DESCRIPTION, "Button pressed",
+                               NULL);
 #endif
 }
 
@@ -589,12 +599,12 @@ on_key_released (EekKey      *key,
     render_released_key (GTK_WIDGET(self), key);
     gtk_widget_queue_draw (GTK_WIDGET(self));
 
-#if HAVE_LIBCANBERRA
-    ca_gtk_play_for_widget (widget, 0,
-                            CA_PROP_EVENT_ID, "button-released",
-                            CA_PROP_EVENT_DESCRIPTION, "virtual key pressed",
-                            CA_PROP_APPLICATION_ID, "org.fedorahosted.Eekboard",
-                            NULL);
+#if HAVE_GSOUND
+    g_return_if_fail (GSOUND_IS_CONTEXT (priv->sound_ctx));
+    gsound_context_play_simple(priv->sound_ctx, NULL, NULL,
+                               GSOUND_ATTR_EVENT_ID, "button-released",
+                               GSOUND_ATTR_EVENT_DESCRIPTION, "Button released",
+                               NULL);
 #endif
 }
 
