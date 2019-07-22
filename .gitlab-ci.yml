@@ -23,7 +23,7 @@ test:
   <<: *tags
   stage: test
   dependencies:
-    - build
+    - build_meson
   script:
     - export LC_ALL=C.UTF-8
     - ninja -C _build test
