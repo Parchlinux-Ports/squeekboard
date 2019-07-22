@@ -11,7 +11,6 @@ test_env = [
 test_cflags = [
   '-I@0@/../src'.format(meson.current_source_dir()),
   '-I@0@/../src'.format(meson.current_build_dir()),
-  '-DFOR_TESTING',
   '-DEEK_COMPILATION',
   '-DEEKBOARD_COMPILATION'
 ]
@@ -34,7 +33,6 @@ foreach name : tests
         test_sources,
         squeekboard_resources,
         link_with: libsqueekboard,
-#        wl_proto_sources,
         c_args : test_cflags,
         link_args: test_link_args,
         dependencies: deps,       # from src/meson.build

@@ -79,7 +79,6 @@ libsqueekboard = static_library('libsqueekboard',
   link_with: rslib,
   include_directories: [include_directories('..'), include_directories('../eek')],
   dependencies: deps,
-  install: true,
   c_args: [
     '-DTHEMESDIR="' + pkgdatadir + '/themes"',
     '-DKEYBOARDSDIR="' + pkgdatadir + '/keyboards"',
