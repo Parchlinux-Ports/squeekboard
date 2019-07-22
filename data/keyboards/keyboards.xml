@@ -96,5 +96,8 @@
   <keyboard id="phone" name="phone"
 	    geometry="number-keypad" symbols="special/number"
 	    longname="Phone keypad" language="all"/>
+  <keyboard id="url" name="url"
+	    geometry="url" symbols="special/url"
+	    longname="Uniform Resource Locator" language="all"/>
 
 </keyboards>

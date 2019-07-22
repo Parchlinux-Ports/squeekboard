@@ -749,6 +749,8 @@ symbols_end_element_callback (GMarkupParseContext *pcontext,
 
         if (data->label) {
             eek_symbol_set_label (symbol, data->label);
+            eek_keyboard_register_symbol (data->keyboard, symbol, data->key,
+                                          g_slist_length (data->symbols));
             g_free (data->label);
             data->label = NULL;
         }
@@ -929,6 +931,7 @@ eek_xml_layout_real_create_keyboard (EekboardContextService *manager,
         return NULL;
     }
 
+    /* Arrange the sections in the original coordinate system. */
     eek_layout_place_sections(keyboard);
 
     /* Use pre-defined modifier mask here. */

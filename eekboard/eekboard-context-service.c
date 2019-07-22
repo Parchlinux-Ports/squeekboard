@@ -309,6 +309,10 @@ settings_update_layout(EekboardContextService *context)
     case ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_PHONE:
         keyboard_layout = g_strdup("number");
         break;
+    case ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_URL:
+        keyboard_layout = g_strdup("url");
+        break;
+    case ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NORMAL:
     default:
         ;
     }

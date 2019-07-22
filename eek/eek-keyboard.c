@@ -75,8 +75,10 @@ struct _EekKeyboardPrivate
     GList *locked_keys;
     GArray *outline_array;
 
-    /* Map key names to key objects: */
+    /* Map key names to key objects */
     GHashTable *names;
+    /* Map characters to symbols and levels */
+    GHashTable *character_map;
 
     /* modifiers dynamically assigned at run time */
     EekModifierType num_lock_mask;
@@ -405,6 +407,7 @@ eek_keyboard_finalize (GObject *object)
                       (GDestroyNotify) eek_modifier_key_free);
 
     g_hash_table_destroy (priv->names);
+    g_hash_table_destroy (priv->character_map);
 
     for (i = 0; i < priv->outline_array->len; i++) {
         EekOutline *outline = &g_array_index (priv->outline_array,
@@ -533,6 +536,8 @@ eek_keyboard_init (EekKeyboard *self)
     self->priv->modifier_behavior = EEK_MODIFIER_BEHAVIOR_NONE;
     self->priv->outline_array = g_array_new (FALSE, TRUE, sizeof (EekOutline));
     self->priv->names = g_hash_table_new (g_str_hash, g_str_equal);
+    self->priv->character_map = g_hash_table_new_full (g_str_hash, g_str_equal,
+        NULL, g_free);
     eek_element_set_symbol_index (EEK_ELEMENT(self), 0, 0);
     self->scale = 1.0;
 }
@@ -889,4 +894,30 @@ eek_keyboard_get_keymap(EekKeyboard *keyboard)
     g_free(keycodes);
     g_free(symbols);
     return keymap;
+}
+
+void
+eek_keyboard_register_symbol (EekKeyboard *keyboard,
+                              EekSymbol   *symbol,
+                              EekKey      *key,
+                              guint        level)
+{
+    const gchar *label = eek_symbol_get_label(symbol);
+
+    if (label) {
+        EekKeyPress *key_press = g_malloc0 (sizeof(EekKeyPress));
+        key_press->key = key;
+        key_press->level = level;
+
+        g_hash_table_insert (keyboard->priv->character_map,
+                             (gpointer)label,
+                             key_press);
+    }
+}
+
+EekKeyPress *
+eek_keyboard_get_key_press (EekKeyboard *keyboard,
+                         gchar       *ch)
+{
+    return g_hash_table_lookup (keyboard->priv->character_map, ch);
 }

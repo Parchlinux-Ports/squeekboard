@@ -124,6 +124,11 @@ struct _EekModifierKey {
 };
 typedef struct _EekModifierKey EekModifierKey;
 
+struct _EekKeyPress {
+    EekKey *key;
+    guint level;
+};
+typedef struct _EekKeyPress EekKeyPress;
 
 EekKeyboard        *eek_keyboard_new (EekboardContextService *manager,
                                       EekLayout          *layout,
@@ -197,6 +202,16 @@ void eek_keyboard_release_key(EekKeyboard *keyboard, EekKey *key, guint32 timest
 
 gchar *             eek_keyboard_get_keymap
                                      (EekKeyboard        *keyboard);
+
+void                eek_keyboard_register_symbol
+                                     (EekKeyboard        *keyboard,
+                                      EekSymbol          *symbol,
+                                      EekKey             *key,
+                                      guint               level);
+
+EekKeyPress *       eek_keyboard_get_key_press
+                                     (EekKeyboard        *keyboard,
+                                      gchar              *ch);
 
 G_END_DECLS
 #endif  /* EEK_KEYBOARD_H */

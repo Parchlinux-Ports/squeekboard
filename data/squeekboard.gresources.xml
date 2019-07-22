@@ -5,6 +5,7 @@
    <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/compact.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/extended.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/number-keypad.xml</file>
+   <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/url.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/keyboards.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/ar.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/as-inscript.xml</file>
@@ -36,6 +37,7 @@
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/us.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/zh-bopomofo.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/special/number.xml</file>
+   <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/special/url.xml</file>
    <file>icons/key-enter.svg</file>
    <file>icons/key-shift.svg</file>
    <file>icons/keyboard-mode-symbolic.svg</file>
