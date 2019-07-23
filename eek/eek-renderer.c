@@ -1048,7 +1048,8 @@ find_key_by_position_key_callback (EekElement *element,
 
     if (b1 == b2 && b2 == b3) {
         data->key = EEK_KEY(element);
-        return 0;
+        if (eek_key_has_label(data->key))
+            return 0;
     }
 
     b1 = sign (&data->point, &points[2], &points[3]) < 0.0;
@@ -1057,7 +1058,8 @@ find_key_by_position_key_callback (EekElement *element,
 
     if (b1 == b2 && b2 == b3) {
         data->key = EEK_KEY(element);
-        return 0;
+        if (eek_key_has_label(data->key))
+            return 0;
     }
 
     return -1;
