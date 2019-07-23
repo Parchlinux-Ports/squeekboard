@@ -9,12 +9,6 @@
   <key name="AD03">
     <symbol label="3">3</symbol>
   </key>
-  <key name="AD04">
-    <symbol label=".">period</symbol>
-  </key>
-  <key name="AD05">
-    <symbol label=",">comma</symbol>
-  </key>
   <key name="AC01">
     <symbol label="4">4</symbol>
   </key>
@@ -23,12 +17,6 @@
   </key>
   <key name="AC03">
     <symbol label="6">6</symbol>
-  </key>
-  <key name="AC04">
-    <symbol label="/">slash</symbol>
-  </key>
-  <key name="AC05">
-    <symbol label="*">asterisk</symbol>
   </key>
   <key name="AB01">
     <symbol label="7">7</symbol>
@@ -40,19 +28,10 @@
     <symbol label="9">9</symbol>
   </key>
   <key name="AB04">
-    <symbol label="+">plus</symbol>
-  </key>
-  <key name="AB05">
-    <symbol label="-">minus</symbol>
-  </key>
-  <key name="AB06">
     <symbol label="0">0</symbol>
   </key>
   <key name="RTRN">
     <symbol keyval="65293" icon="key-enter">Return</symbol>
-  </key>
-  <key name="SPCE">
-    <symbol label=" ">space</symbol>
   </key>
   <key name="BKSP">
     <symbol keyval="65288" icon="edit-clear-symbolic">BackSpace</symbol>

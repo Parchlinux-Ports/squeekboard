@@ -10,10 +10,10 @@
     <symbol label="3">3</symbol>
   </key>
   <key name="AD04">
-    <symbol label=".">period</symbol>
+    <symbol label="(">parenleft</symbol>
   </key>
   <key name="AD05">
-    <symbol label=",">comma</symbol>
+    <symbol label=")">parenright</symbol>
   </key>
   <key name="AC01">
     <symbol label="4">4</symbol>
@@ -25,7 +25,7 @@
     <symbol label="6">6</symbol>
   </key>
   <key name="AC04">
-    <symbol label="/">slash</symbol>
+    <symbol label="#">numbersign</symbol>
   </key>
   <key name="AC05">
     <symbol label="*">asterisk</symbol>

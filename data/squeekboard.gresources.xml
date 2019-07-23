@@ -2,11 +2,19 @@
 <gresources>
   <gresource prefix="/sm/puri/squeekboard">
    <file compressed="true">style.css</file>
+
+<!-- Keyboard layouts -->
    <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/compact.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/extended.xml</file>
+   <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/digits.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/number-keypad.xml</file>
+   <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/phone-keypad.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/geometry/url.xml</file>
+
+<!-- Keyboard definitions -->
    <file compressed="true" preprocess="xml-stripblanks">keyboards/keyboards.xml</file>
+
+<!-- Natural language keyboards -->
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/ar.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/as-inscript.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/be.xml</file>
@@ -36,8 +44,13 @@
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/ug.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/us.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/zh-bopomofo.xml</file>
+
+<!-- Special purpose keyboards -->
+   <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/special/digits.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/special/number.xml</file>
+   <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/special/phone.xml</file>
    <file compressed="true" preprocess="xml-stripblanks">keyboards/symbols/special/url.xml</file>
+
    <file>icons/key-enter.svg</file>
    <file>icons/key-shift.svg</file>
    <file>icons/keyboard-mode-symbolic.svg</file>

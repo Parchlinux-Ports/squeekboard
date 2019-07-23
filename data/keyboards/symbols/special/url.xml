@@ -3,68 +3,68 @@
   <key name="AD01">
     <symbol label="q">q</symbol>
     <symbol label="Q">Q</symbol>
+    <symbol label=""></symbol>
     <symbol label="1">1</symbol>
-    <text label="https://">https://</text>
   </key>
   <key name="AD02">
     <symbol label="w">w</symbol>
     <symbol label="W">W</symbol>
+    <symbol label=""></symbol>
     <symbol label="2">2</symbol>
-    <symbol label="`">quoteleft</symbol>
   </key>
   <key name="AD03">
     <symbol label="e">e</symbol>
     <symbol label="E">E</symbol>
+    <symbol label=""></symbol>
     <symbol label="3">3</symbol>
-    <symbol label="|">bar</symbol>
   </key>
   <key name="AD04">
     <symbol label="r">r</symbol>
     <symbol label="R">R</symbol>
+    <symbol label=""></symbol>
     <symbol label="4">4</symbol>
-    <symbol label="&#183;">U00B7</symbol>
   </key>
   <key name="AD05">
     <symbol label="t">t</symbol>
     <symbol label="T">T</symbol>
+    <symbol label=""></symbol>
     <symbol label="5">5</symbol>
-    <symbol label="&#8730;">squareroot</symbol>
   </key>
   <key name="AD06">
     <symbol label="y">y</symbol>
     <symbol label="Y">Y</symbol>
+    <symbol label=""></symbol>
     <symbol label="6">6</symbol>
-    <symbol label="&#960;">Greek_pi</symbol>
   </key>
   <key name="AD07">
     <symbol label="u">u</symbol>
     <symbol label="U">U</symbol>
+    <symbol label=""></symbol>
     <symbol label="7">7</symbol>
-    <symbol label="&#247;">division</symbol>
   </key>
   <key name="AD08">
     <symbol label="i">i</symbol>
     <symbol label="I">I</symbol>
+    <symbol label=""></symbol>
     <symbol label="8">8</symbol>
-    <symbol label="&#215;">multiply</symbol>
   </key>
   <key name="AD09">
     <symbol label="o">o</symbol>
     <symbol label="O">O</symbol>
+    <symbol label=""></symbol>
     <symbol label="9">9</symbol>
-    <symbol label="&#182;">paragraph</symbol>
   </key>
   <key name="AD10">
     <symbol label="p">p</symbol>
     <symbol label="P">P</symbol>
+    <symbol label=""></symbol>
     <symbol label="0">0</symbol>
-    <symbol label="&#9651;">U25B3</symbol>
   </key>
   <key name="AC01">
     <symbol label="a">a</symbol>
     <symbol label="A">A</symbol>
     <symbol label="@">at</symbol>
-    <symbol label="&#169;">copyright</symbol>
+    <symbol label="~">asciitilde</symbol>
   </key>
   <key name="AC02">
     <symbol label="s">s</symbol>
@@ -126,8 +126,8 @@
   <key name="LFSH">
     <keysym keyval="65505" icon="key-shift">Shift_L</keysym>
     <keysym keyval="65505" icon="key-shift">Shift_L</keysym>
-    <keysym keyval="65505" label="URL">Shift_L</keysym>
     <keysym keyval="65505" label="123">Shift_L</keysym>
+    <keysym keyval="65505" label="URL">Shift_L</keysym>
   </key>
   <key name="AB01">
     <symbol label="z">z</symbol>
@@ -175,8 +175,8 @@
     <symbol label=".">period</symbol>
   </key>
   <key name="ABC123">
-    <symbol label="123">show-numbers</symbol>
-    <symbol label="123">show-numbers</symbol>
+    <symbol label="URL">show-url</symbol>
+    <symbol label="URL">show-url</symbol>
     <symbol label="ABC">show-letters</symbol>
     <symbol label="ABC">show-letters</symbol>
   </key>
@@ -189,4 +189,43 @@
   <key name="BKSP">
     <symbol keyval="65288" icon="edit-clear-symbolic">BackSpace</symbol>
   </key>
+
+<!-- Extra URL mode buttons -->
+  <key name="AE01">
+    <symbol label=""></symbol>
+    <symbol label=""></symbol>
+    <text label="https">https</text>
+    <symbol label=""></symbol>
+  </key>
+  <key name="AE02">
+    <symbol label=""></symbol>
+    <symbol label=""></symbol>
+    <text label="://">://</text>
+    <symbol label=""></symbol>
+  </key>
+  <key name="AE03">
+    <symbol label=""></symbol>
+    <symbol label=""></symbol>
+    <text label="www.">www.</text>
+    <symbol label=""></symbol>
+  </key>
+  <key name="AE04">
+    <symbol label=""></symbol>
+    <symbol label=""></symbol>
+    <text label=".com">.com</text>
+    <symbol label=""></symbol>
+  </key>
+  <key name="AE05">
+    <symbol label=""></symbol>
+    <symbol label=""></symbol>
+    <text label=".org">.org</text>
+    <symbol label=""></symbol>
+  </key>
+  <key name="AE06">
+    <symbol label=""></symbol>
+    <symbol label=""></symbol>
+    <text label=".net">.net</text>
+    <symbol label=""></symbol>
+  </key>
+
 </symbols>
