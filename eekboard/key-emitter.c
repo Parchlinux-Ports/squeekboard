@@ -118,7 +118,6 @@ send_fake_text (SeatEmitter *emitter,
         if (key_press) {
             EekKey *key = key_press->key;
             EekSymbolMatrix *matrix = eek_key_get_symbol_matrix(key);
-            EekSymbol *sym = eek_symbol_matrix_get_symbol(matrix, 0, key_press->level);
 
             send_fake_key (emitter, key_press->level, eek_key_get_keycode(key),
                            (key_press->level % 2) == 1 ? EEK_SHIFT_MASK : 0,
