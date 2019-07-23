@@ -305,9 +305,15 @@ settings_update_layout(EekboardContextService *context)
     EekboardContextServicePrivate *priv = EEKBOARD_CONTEXT_SERVICE_GET_PRIVATE(context);
 
     switch (priv->purpose) {
+    case ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_DIGITS:
+    case ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_PIN:
+        keyboard_layout = g_strdup("digits");
+        break;
     case ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NUMBER:
-    case ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_PHONE:
         keyboard_layout = g_strdup("number");
+        break;
+    case ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_PHONE:
+        keyboard_layout = g_strdup("phone");
         break;
     case ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_URL:
         keyboard_layout = g_strdup("url");
