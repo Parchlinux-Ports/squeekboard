@@ -850,7 +850,7 @@ eek_keyboard_get_keymap(EekKeyboard *keyboard)
 
         /* Get the symbols for all the levels defined for the key, then
            pad it out with the first symbol for all levels up to the fourth. */
-        for (i = 0; i < matrix->num_levels; ++i)
+        for (i = 0; (i < matrix->num_levels) && (i < 4); ++i)
             syms[i] = eek_symbol_matrix_get_symbol(matrix, 0, i);
 
         while (i < 4) {
@@ -862,14 +862,12 @@ eek_keyboard_get_keymap(EekKeyboard *keyboard)
            Generate strings for each of these groups, where an empty group is
            treated specially. */
 
-        gchar *groups[2];
+        gchar *groups[2] = {NULL, NULL};
         for (i = 0, j = 0; i < 2; ++i, j += 2) {
             if (syms[j] && syms[j + 1])
                 groups[i] = g_strjoin(", ", eek_symbol_get_name(syms[j]),
                                             eek_symbol_get_name(syms[j + 1]),
                                             NULL);
-            else
-                groups[i] = "";
         }
 
         /* Append a key definition to the symbols section. */
