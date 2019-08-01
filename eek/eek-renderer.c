@@ -553,8 +553,8 @@ eek_renderer_real_render_key_label (EekRenderer *self,
                                         priv->ascii_font :
                                         priv->font);
     pango_font_description_set_size (font,
-                                     pango_font_description_get_size (font) *
-                                     (gint)round(prop->scale * scale));
+                                     (gint)round(pango_font_description_get_size (font) *
+                                     prop->scale * scale));
     pango_layout_set_font_description (layout, font);
     pango_font_description_free (font);
 
