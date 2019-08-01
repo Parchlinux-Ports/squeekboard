@@ -115,10 +115,10 @@ create_keyboard_surface_key_callback (EekElement *element,
     eek_element_get_bounds (element, &bounds);
     cairo_translate (data->cr, bounds.x, bounds.y);
     cairo_rectangle (data->cr,
-		     0.0,
-		     0.0,
-		     bounds.width,
-		     bounds.height);
+                     0.0,
+                     0.0,
+                     bounds.width,
+                     bounds.height);
     cairo_clip (data->cr);
     render_key (data->renderer, data->cr, EEK_KEY(element), FALSE);
 
