@@ -104,12 +104,14 @@ send_fake_key (SeatEmitter *emitter,
 static void
 send_fake_text (SeatEmitter *emitter,
                 EekKeyboard *keyboard,
-                gchar *text,
+                const gchar *text,
                 uint32_t timestamp)
 {
-    while (*text) {
+    gchar *ptr = (gchar *)text;
+
+    while (*ptr) {
         gchar buf[7];
-        gunichar c = g_utf8_get_char(text);
+        gunichar c = g_utf8_get_char(ptr);
         int n = g_unichar_to_utf8(c, buf);
         *(buf + n) = 0;
 
@@ -117,7 +119,6 @@ send_fake_text (SeatEmitter *emitter,
 
         if (key_press) {
             EekKey *key = key_press->key;
-            EekSymbolMatrix *matrix = eek_key_get_symbol_matrix(key);
 
             send_fake_key (emitter, key_press->level, eek_key_get_keycode(key),
                            (key_press->level % 2) == 1 ? EEK_SHIFT_MASK : 0,
@@ -128,7 +129,7 @@ send_fake_text (SeatEmitter *emitter,
                            0, timestamp);
         }
 
-        text = g_utf8_find_next_char(text, NULL);
+        ptr = g_utf8_find_next_char(ptr, NULL);
     }
 }
 
@@ -173,11 +174,11 @@ emit_key_activated (EekboardContextService *manager,
     emitter.keymap = keyboard->keymap;
     update_modifier_info (&emitter);
 
-    guint level = eek_element_get_level(EEK_ELEMENT(keyboard));
-
-    if (EEK_IS_TEXT(symbol) && pressed) {
-        gchar *text = (gchar *)eek_text_get_text(EEK_TEXT(symbol));
+    const gchar *text = (gchar *)eek_text_get_text(symbol);
+    if (text && pressed) {
         send_fake_text (&emitter, keyboard, text, timestamp);
-    } else
+    } else {
+        guint level = eek_element_get_level(EEK_ELEMENT(keyboard));
         send_fake_key (&emitter, level, keycode, modifiers, pressed, timestamp);
+    }
 }
