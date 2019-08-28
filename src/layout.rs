@@ -568,7 +568,7 @@ pub struct Button {
     pub state: Rc<RefCell<KeyState>>,
 }
 
-
+// FIXME: derive from the style/margin/padding
 const BUTTON_SPACING: f64 = 4.0;
 const ROW_SPACING: f64 = 7.0;
 
@@ -710,10 +710,17 @@ impl View {
     }
 
     /// Finds the first button that covers the specified point
-    /// relative to view's origin
+    /// relative to view's position's origin
     fn find_button_by_position(&mut self, point: c::Point)
         -> Option<&mut Box<Button>>
     {
+        // make point relative to the inside of the view,
+        // which is the origin of all rows
+        let point = c::Point {
+            x: point.x - self.bounds.x,
+            y: point.y - self.bounds.y,
+        };
+
         self.rows.iter_mut().find_map(
             |row| row.find_button_by_position(point.clone())
         )

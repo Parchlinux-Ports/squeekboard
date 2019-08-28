@@ -978,20 +978,10 @@ eek_renderer_find_button_by_position (EekRenderer *renderer,
     g_return_val_if_fail (EEK_IS_RENDERER(renderer), NULL);
 
     EekRendererPrivate *priv = eek_renderer_get_instance_private (renderer);
-    EekBounds bounds = squeek_view_get_bounds (view);
 
-    /* Transform from widget coordinates to keyboard coordinates */
-    x = (x - priv->origin_x)/priv->scale - bounds.x;
-    y = (y - priv->origin_y)/priv->scale - bounds.y;
-
-    if (x < 0 ||
-        y < 0 ||
-        x > bounds.width ||
-        y > bounds.height)
-        return NULL;
     EekPoint point = {
-        .x = x,
-        .y = y,
+        .x = (x - priv->origin_x)/priv->scale,
+        .y = (y - priv->origin_y)/priv->scale,
     };
     return squeek_view_find_button_by_position(view, point);
 }
