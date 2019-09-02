@@ -25,10 +25,10 @@
 	    geometry="compact" symbols="my"
 	    longname="Myanmar" language="my"/>
   <keyboard id="nb" name="nb"
-	    geometry="extended" symbols="nb"
+	    geometry="nb" symbols="nb"
 	    longname="Norwegian" language="nb"/>
   <keyboard id="ru" name="ru"
-	    geometry="compact" symbols="us"
+	    geometry="ru" symbols="ru"
 	    longname="Russian" language="ru"/>
   <keyboard id="th" name="th"
 	    geometry="compact" symbols="th"
