@@ -21,7 +21,7 @@ build_meson:
   stage: build
   artifacts:
     paths:
-      - _build
+      - _build/src/squeekboard
   script:
     - meson . _build/ -Ddepdatadir=/usr/share
     - ninja -C _build install
