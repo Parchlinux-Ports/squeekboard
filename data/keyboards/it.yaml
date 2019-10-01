@@ -19,7 +19,7 @@ outlines:
 views:
     base:
         - "q w e r t y u i o p"
-        - "a s d f g h j k l ñ"
+        - "a s d f g h j k l n"
         - "Shift_L   z x c v b n m  BackSpace"
         - "show_numbers show_eschar preferences         space        ? period Return"
     upper:
@@ -39,7 +39,7 @@ views:
         - "show_letters show_eschar preferences         space        ? period Return"
     eschar:
         - "á é í ó ú Á É Í Ó Ú"
-        - "ñ Ñ ç Ç « » ¡ ! { }"
+        - "à è ì ò « » ù ! { }"
         - "show_numbers_from_symbols   \\ / < > = [ ]  BackSpace"
         - "show_letters show_symbols preferences         space        ? period Return"
 
@@ -82,7 +82,7 @@ buttons:
         action:
             set_view: "eschar"
         outline: "altline"
-        label: "áÇ"
+        label: "àè"
     period:
         outline: "default"
         label: "."
