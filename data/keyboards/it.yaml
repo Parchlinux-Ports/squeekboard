@@ -49,7 +49,7 @@ buttons:
     Shift_L:
         action:
             locking:
-                lock_view: "upper"
+                lock_view: "Maiusc"
                 unlock_view: "base"
         outline: "altline"
         icon: "key-shift"
@@ -74,15 +74,15 @@ buttons:
         action:
             set_view: "base"
         outline: "altline"
-        label: "ABC"
+        label: "abc"
     show_symbols:
         action:
             set_view: "symbols"
         outline: "altline"
         label: "*/="
-    show_eschar:
+    show_eschars:
         action:
-            set_view: "eschar"
+            set_view: "eschars"
         outline: "altline"
         label: "àè"
     period:
