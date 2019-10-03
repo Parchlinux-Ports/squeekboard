@@ -1,3 +1,5 @@
+# Italian layout created by Antonio Pandolfo
+# 03 october 2019
 ---
 row_spacing: 11.33
 button_spacing: 4.67
@@ -24,7 +26,7 @@ views:
         - "show_numbers show_eschars preferences         space        ? period Return"
     upper:
         - "Q W E R T Y U I O P"
-        - "A S D F G H J K L Ñ"
+        - "A S D F G H J K L N"
         - "Shift_L   Z X C V B N M  BackSpace"
         - "show_numbers show_eschars preferences         space        ? period Return"
     numbers:
