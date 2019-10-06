@@ -82,7 +82,7 @@ buttons:
         label: "*/="
     show_eschars:
         action:
-            set_view: "eschar"
+            set_view: "eschars"
         outline: "altline"
         label: "àè"
     period:
