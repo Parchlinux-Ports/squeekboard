@@ -1,3 +1,11 @@
+squeekboard (1.0.10+nmu1) amber-phone; urgency=medium
+
+  * Add dbus protocol definition.
+    This let's us drop the virtboard build dependency.
+  * debian: Drop virtboard build-dependency
+
+ -- Guido Günther <agx@sigxcpu.org>  Mon, 07 Oct 2019 09:31:18 +0200
+
 squeekboard (1.0.10) unstable; urgency=medium
 
   * Use a shared DBus definition
