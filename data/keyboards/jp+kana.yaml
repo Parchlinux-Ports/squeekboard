@@ -1,0 +1,212 @@
+---
+row_spacing: 11.33
+button_spacing: 4.67
+
+bounds: { x: 0, y: 1, width: 360, height: 198 }
+
+outlines:
+    default:
+        bounds: { x: 0, y: 0, width: 30.67, height: 40.67 }
+    altline:
+        bounds: { x: 0, y: 0, width: 48, height: 40.67 }
+    wide:
+        bounds: { x: 0, y: 0, width: 57.33, height: 40.67 }
+    spaceline:
+        bounds: { x: 0, y: 0, width: 137.33, height: 40.67 }
+    special:
+        bounds: { x: 0, y: 0, width: 39.33, height: 40.67 }
+
+views:
+    base: # hiragana
+        - "k っ ッ ー ゃ ゅ ょ 、"
+        - "s あ い う え お ん 。"
+        - "カタカナ t h mn yrw  BackSpace"
+        - "numbers preferences         space  Return"
+    k:
+        - "k"
+        - "か き く け こ"
+        - "が ぎ ぐ げ ご"
+        - "か゚ き゚ く゚ け゚ こ゚" # 2 code points each
+    s:
+        - "s"
+        - "さ し す せ そ"
+        - "ざ じ ず ぜ ぞ"
+    t:
+        - "t"
+        - "た ち つ て と"
+        - "だ ぢ づ で ど"
+    h:
+        - "h"
+        - "は ひ ふ へ ほ"
+        - "ば び ぶ べ ぼ"
+        - "ぱ ぴ ぷ ぺ ぽ"
+    mn:
+        - "mn"
+        - "ま み む め も"
+        - "な に ぬ ね の"
+    yrw:
+        - "yrw"
+        - "や ※ ゆ ※ よ"
+        - "ら り る れ ろ"
+        - "わ ゐ ※ ゑ を"
+
+#a あア 	かカ 	さサ 	たタ 	なナ 	はハ 	まマ 	やヤ 	らラ 	わワ
+#i 	いイ 	きキ 	しシ 	ちチ 	にニ 	ひヒ 	みミ 	※ 	りリ 	ゐヰ
+#u 	うウ 	くク 	すス 	つツ 	ぬヌ 	ふフ 	むム 	ゆユ 	るル 	※
+#e 	えエ 	けケ 	せセ 	てテ 	ねネ 	へヘ 	めメ 	※ 	れレ 	ゑヱ
+#o 	おオ 	こコ 	そソ 	とト 	のノ 	ほホ 	もモ 	よヨ 	ろロ 	をヲ
+
+#    g 	z 	d 	b 	p 	ng
+#a 	が ガ 	ざ ザ 	だ ダ 	ば バ 	ぱ パ 	か゚ カ゚
+#i 	ぎ ギ 	じ ジ 	ぢ ヂ 	び ビ 	ぴ ピ 	き゚ キ゚
+#u 	ぐ グ 	ず ズ 	づ ヅ 	ぶ ブ 	ぷ プ 	く゚ ク゚
+#e 	げ ゲ 	ぜ ゼ 	で デ 	べ ベ 	ぺ ペ 	け゚ ケ゚
+#o 	ご ゴ 	ぞ ゾ 	ど ド 	ぼ ボ 	ぽ ポ 	こ゚ コ゚ 
+
+    カタカナ:
+        - "k_k っ ッ ー ャ ュ ョ 、"
+        - "k_s ア イ ウ エ オ ン 。"
+        - "ひらがな k_t k_h k_mn k_yrw  BackSpace"
+        - "numbers preferences         space  Return"
+    k_k:
+        - "k_k"
+        - "カ キ ク ケ コ"
+        - "ガ ギ グ ゲ ゴ"
+        - "カ゚ キ゚ ク゚ ケ゚ コ゚" # 2 code points each
+    k_s:
+        - "k_s"
+        - "サ シ ス セ ソ"
+        - "ザ ジ ズ ゼ ゾ"
+    k_t:
+        - "k_t"
+        - "タ チ ツ テ ト"
+        - "ダ ヂ ヅ デ ド"
+    k_h:
+        - "k_h"
+        - "ハ ヒ フ ヘ ホ"
+        - "バ ビ ブ ベ ボ"
+        - "パ ピ プ ペ ポ"
+    k_mn:
+        - "k_mn"
+        - "マ ミ ム メ モ"
+        - "ナ ニ ヌ ネ ノ"
+    k_yrw:
+        - "k_yrw"
+        - "ヤ ※ ユ ※ ヨ"
+        - "ラ リ ル レ ロ"
+        - "ワ ヰ ※ ヱ ヲ"
+
+    numbers:
+        - "1 2 3 4 5 6 7 8 9 0"
+        - "「 」 〜 … - + （ ）"
+        - "ひらがな   【 】 ： ？ ！ ♪  BackSpace"
+        - "カタカナ preferences         space  Return"
+
+buttons:
+    BackSpace:
+        outline: "altline"
+        icon: "edit-clear-symbolic"
+    preferences:
+        action: "show_prefs"
+        outline: "special"
+        icon: "keyboard-mode-symbolic"
+    numbers:
+        action:
+            set_view: "numbers"
+        outline: "wide"
+        label: "123"
+    ひらがな:
+        action:
+            set_view: "base"
+        outline: "altline"
+        label: "あさ"
+    space:
+        outline: "spaceline"
+        label: "　"
+        keysym: "U3000"
+    Return:
+        outline: "wide"
+        icon: "key-enter"
+    k:
+        action:
+            locking:
+                lock_view: "k"
+                unlock_view: "base"
+        outline: "altline"
+    s:
+        action:
+            locking:
+                lock_view: "s"
+                unlock_view: "base"
+        outline: "altline"
+    t:
+        action:
+            locking:
+                lock_view: "t"
+                unlock_view: "base"
+        outline: "altline"
+    h:
+        action:
+            locking:
+                lock_view: "h"
+                unlock_view: "base"
+        outline: "altline"
+    mn:
+        action:
+            locking:
+                lock_view: "mn"
+                unlock_view: "base"
+        outline: "altline"
+    yrw:
+        action:
+            locking:
+                lock_view: "yrw"
+                unlock_view: "base"
+        outline: "altline"
+    カタカナ:
+        action:
+            set_view: "カタカナ"
+        outline: "altline"
+        label: "アサ"
+    k_k:
+        action:
+            locking:
+                lock_view: "k_k"
+                unlock_view: "カタカナ"
+        outline: "altline"
+        label: "k"
+    k_s:
+        action:
+            locking:
+                lock_view: "k_s"
+                unlock_view: "カタカナ"
+        outline: "altline"
+        label: "s"
+    k_t:
+        action:
+            locking:
+                lock_view: "k_t"
+                unlock_view: "カタカナ"
+        outline: "altline"
+        label: "t"
+    k_h:
+        action:
+            locking:
+                lock_view: "k_h"
+                unlock_view: "カタカナ"
+        outline: "altline"
+        label: "h"
+    k_mn:
+        action:
+            locking:
+                lock_view: "k_mn"
+                unlock_view: "カタカナ"
+        outline: "altline"
+        label: "mn"
+    k_yrw:
+        action:
+            locking:
+                lock_view: "k_yrw"
+                unlock_view: "カタカナ"
+        outline: "altline"
+        label: "yrw"
