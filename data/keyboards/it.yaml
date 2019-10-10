@@ -49,7 +49,7 @@ buttons:
     Shift_L:
         action:
             locking:
-                lock_view: "Maiusc"
+                lock_view: "upper"
                 unlock_view: "base"
         outline: "altline"
         icon: "key-shift"
@@ -90,7 +90,7 @@ buttons:
         label: "."
     space:
         outline: "spaceline"
-        label: "Italia"
+        label: " "
     Return:
         outline: "altline"
         icon: "key-enter"
