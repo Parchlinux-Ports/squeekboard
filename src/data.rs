@@ -19,6 +19,7 @@ use ::keyboard::{
 };
 use ::resources;
 use ::util::c::as_str;
+use ::util::hash_map_map;
 use ::xdg;
 
 // traits, derives
@@ -67,15 +68,6 @@ impl fmt::Display for LoadError {
     }
 }
 
-pub fn load_layout_from_resource(
-    name: &str
-) -> Result<Layout, LoadError> {
-    let data = resources::get_keyboard(name)
-                .ok_or(LoadError::MissingResource)?;
-    serde_yaml::from_str(data)
-                .map_err(|e| LoadError::BadResource(e))
-}
-
 #[derive(Debug, PartialEq)]
 enum DataSource {
     File(PathBuf),
@@ -101,11 +93,13 @@ fn load_layout(
     DataSource, // last attempt source
     Option<(LoadError, DataSource)>, // first attempt source
 ) {
-    let path = keyboards_path.map(|path| path.join(name).with_extension("yaml"));
+    let path = keyboards_path.map(|path|
+        path.join(name).with_extension("yaml")
+    );
 
     let layout = match path {
         Some(path) => Some((
-            Layout::from_yaml_stream(path.clone())
+            Layout::from_file(path.clone())
                 .map_err(LoadError::BadData)
                 .and_then(|layout|
                     layout.build().map_err(LoadError::BadKeyMap)
@@ -124,7 +118,7 @@ fn load_layout(
     let (layout, source) = match layout {
         Some((layout, path)) => (Ok(layout), path),
         None => (
-            load_layout_from_resource(name)
+            Layout::from_resource(name)
                 .and_then(|layout|
                     layout.build().map_err(LoadError::BadKeyMap)
                 ),
@@ -135,6 +129,28 @@ fn load_layout(
     (layout, source, failed_attempt)
 }
 
+fn log_attempt_info(attempt: Option<(LoadError, DataSource)>) {
+    match attempt {
+        Some((
+            LoadError::BadData(Error::Missing(e)),
+            DataSource::File(file)
+        )) => {
+            eprintln!(
+                "Tried file {:?}, but it's missing: {}",
+                file, e
+            );
+            // Missing file, not to worry. TODO: print in debug logging level
+        },
+        Some((e, source)) => {
+            eprintln!(
+                "Failed to load layout from {}: {}, trying builtin",
+                source, e
+            );
+        },
+        _ => {}
+    };
+}
+
 fn load_layout_with_fallback(
     name: &str
 ) -> ::layout::Layout {
@@ -143,13 +159,8 @@ fn load_layout_with_fallback(
         .or_else(|| xdg::data_path("squeekboard/keyboards"));
     
     let (layout, source, attempt) = load_layout(name, path.clone());
-    
-    if let Some((e, source)) = attempt {
-        eprintln!(
-            "Failed to load layout from {}: {}, trying builtin",
-            source, e
-        );
-    };
+
+    log_attempt_info(attempt);
     
     let (layout, source, attempt) = match (layout, source) {
         (Err(e), source) => {
@@ -162,12 +173,7 @@ fn load_layout_with_fallback(
         (res, source) => (res, source, None),
     };
 
-    if let Some((e, source)) = attempt {
-        eprintln!(
-            "Failed to load layout from {}: {}, trying builtin",
-            source, e
-        );
-    };
+    log_attempt_info(attempt);
 
     match (layout, source) {
         (Err(e), source) => {
@@ -241,10 +247,15 @@ struct Outline {
     bounds: Bounds,
 }
 
+/// Errors encountered loading the layout into yaml
 #[derive(Debug)]
 pub enum Error {
     Yaml(serde_yaml::Error),
     Io(io::Error),
+    /// The file was missing.
+    /// It's distinct from Io in order to make it matchable
+    /// without calling io::Error::kind()
+    Missing(io::Error),
 }
 
 impl fmt::Display for Error {
@@ -252,21 +263,38 @@ impl fmt::Display for Error {
         match self {
             Error::Yaml(e) => write!(f, "YAML: {}", e),
             Error::Io(e) => write!(f, "IO: {}", e),
+            Error::Missing(e) => write!(f, "Missing: {}", e),
+        }
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self {
+        let kind = e.kind();
+        match kind {
+            io::ErrorKind::NotFound => Error::Missing(e),
+            _ => Error::Io(e),
         }
     }
 }
 
 impl Layout {
-    fn from_yaml_stream(path: PathBuf) -> Result<Layout, Error> {
+    pub fn from_resource(name: &str) -> Result<Layout, LoadError> {
+        let data = resources::get_keyboard(name)
+                    .ok_or(LoadError::MissingResource)?;
+        serde_yaml::from_str(data)
+                    .map_err(LoadError::BadResource)
+    }
+
+    fn from_file(path: PathBuf) -> Result<Layout, Error> {
         let infile = BufReader::new(
             fs::OpenOptions::new()
                 .read(true)
-                .open(&path)
-                .map_err(Error::Io)?
+                .open(&path)?
         );
-        serde_yaml::from_reader(infile)
-            .map_err(Error::Yaml)
+        serde_yaml::from_reader(infile).map_err(Error::Yaml)
     }
+
     pub fn build(self) -> Result<::layout::Layout, FormattingError> {
         let button_names = self.views.values()
             .flat_map(|rows| {
@@ -277,40 +305,72 @@ impl Layout {
         let button_names: HashSet<&str>
             = HashSet::from_iter(button_names);
 
-        let keycodes = generate_keycodes(
-            button_names.iter()
-                .map(|name| *name)
-                .filter(|name| {
-                    match self.buttons.get(*name) {
-                        // buttons with defined action can't emit keysyms
-                        // and so don't need keycodes
-                        Some(ButtonMeta { action: Some(_), .. }) => false,
-                        _ => true,
-                    }
-                })
-        );
-
-        let button_states = button_names.iter().map(|name| {(
-            String::from(*name),
-            Rc::new(RefCell::new(KeyState {
-                pressed: false,
-                locked: false,
-                keycode: keycodes.get(*name).map(|k| *k),
-                symbol: create_symbol(
+        let button_actions: Vec<(&str, ::action::Action)>
+            = button_names.iter().map(|name| {(
+                *name,
+                create_action(
                     &self.buttons,
                     name,
                     self.views.keys().collect()
-                ),
-            }))
-        )});
+                )
+            )}).collect();
 
-        let button_states =
-            HashMap::<String, Rc<RefCell<KeyState>>>::from_iter(
+        let keymap: HashMap<String, u32> = generate_keycodes(
+            button_actions.iter()
+                .filter_map(|(_name, action)| {
+                    match action {
+                        ::action::Action::Submit {
+                            text: _, keys,
+                        } => Some(keys),
+                        _ => None,
+                    }
+                })
+                .flatten()
+                .map(|named_keysym| named_keysym.0.as_str())
+        );
+
+        let button_states = button_actions.into_iter().map(|(name, action)| {
+            let keycodes = match &action {
+                ::action::Action::Submit { text: _, keys } => {
+                    keys.iter().map(|named_keycode| {
+                        *keymap.get(named_keycode.0.as_str())
+                            .expect(
+                                format!(
+                                    "keycode {} in key {} missing from keymap",
+                                    named_keycode.0,
+                                    name
+                                ).as_str()
+                            )
+                    }).collect()
+                },
+                _ => Vec::new(),
+            };
+            (
+                name.into(),
+                KeyState {
+                    pressed: false,
+                    locked: false,
+                    keycodes,
+                    action,
+                }
+            )
+        });
+
+        let button_states
+            = HashMap::<String, KeyState>::from_iter(
                 button_states
             );
 
         // TODO: generate from symbols
         let keymap_str = generate_keymap(&button_states)?;
+
+        let button_states_cache = hash_map_map(
+            button_states,
+            |name, state| {(
+                name,
+                Rc::new(RefCell::new(state))
+            )}
+        );
 
         let views = HashMap::from_iter(
             self.views.iter().map(|(name, view)| {(
@@ -335,7 +395,7 @@ impl Layout {
                                     &self.buttons,
                                     &self.outlines,
                                     name,
-                                    button_states.get(name.into())
+                                    button_states_cache.get(name.into())
                                         .expect("Button state not created")
                                         .clone()
                                 ))
@@ -357,11 +417,11 @@ impl Layout {
     }
 }
 
-fn create_symbol(
+fn create_action(
     button_info: &HashMap<String, ButtonMeta>,
     name: &str,
     view_names: Vec<&String>,
-) -> ::symbol::Symbol {
+) -> ::action::Action {
     let default_meta = ButtonMeta::default();
     let symbol_meta = button_info.get(name)
         .unwrap_or(&default_meta);
@@ -387,64 +447,68 @@ fn create_symbol(
         xkb::keysym_from_name(name, xkb::KEYSYM_NO_FLAGS) != xkb::KEY_NoSymbol
     }
     
-    let keysym = match &symbol_meta.action {
-        Some(_) => None,
-        None => Some(match &symbol_meta.keysym {
-            Some(keysym) => match keysym_valid(keysym.as_str()) {
+    let keysyms = match &symbol_meta.action {
+        // Non-submit action
+        Some(_) => Vec::new(),
+        // Submit action
+        None => match &symbol_meta.keysym {
+            // Keysym given explicitly
+            Some(keysym) => vec!(match keysym_valid(keysym.as_str()) {
                 true => keysym.clone(),
                 false => {
                     eprintln!("Keysym name invalid: {}", keysym);
                     "space".into() // placeholder
                 },
-            },
+            }),
+            // Keysyms left open to derive
+            // TODO: when button name is meant diretly as xkb keysym name,
+            // mark it so, e.g. with a "#"
             None => match keysym_valid(name) {
-                true => String::from(name),
-                false => match name.chars().count() {
-                    1 => format!("U{:04X}", name.chars().next().unwrap() as u32),
-                    // If the name is longer than 1 char,
-                    // then it's not a single Unicode char,
-                    // but was trying to be an identifier
-                    _ => {
-                        eprintln!(
-                            "Could not derive a valid keysym for key {}",
-                            name
-                        );
-                        "space".into() // placeholder
+                // Button name is actually a valid xkb name
+                true => vec!(String::from(name)),
+                // Button name is not a valid xkb name,
+                // so assume it's a literal string to be submitted
+                false => {
+                    if name.chars().count() == 0 {
+                        // A name read from yaml with no valid Unicode.
+                        // Highly improbable, but let's be safe.
+                        eprintln!("Key {} doesn't have any characters", name);
+                        vec!("space".into()) // placeholder
+                    } else {
+                        name.chars().map(|codepoint| {
+                            let codepoint_string = codepoint.to_string();
+                            match keysym_valid(codepoint_string.as_str()) {
+                                true => codepoint_string,
+                                false => format!("U{:04X}", codepoint as u32),
+                            }
+                        }).collect()
                     }
                 },
             },
-        }),
+        },
     };
     
     match &symbol_meta.action {
-        Some(Action::SetView(view_name)) => ::symbol::Symbol {
-            action: ::symbol::Action::SetLevel(
-                filter_view_name(name, view_name.clone(), &view_names)
+        Some(Action::SetView(view_name)) => ::action::Action::SetLevel(
+            filter_view_name(name, view_name.clone(), &view_names)
+        ),
+        Some(Action::Locking {
+            lock_view, unlock_view
+        }) => ::action::Action::LockLevel {
+            lock: filter_view_name(name, lock_view.clone(), &view_names),
+            unlock: filter_view_name(
+                name,
+                unlock_view.clone(),
+                &view_names
             ),
         },
-        Some(Action::Locking { lock_view, unlock_view }) => ::symbol::Symbol {
-            action: ::symbol::Action::LockLevel {
-                lock: filter_view_name(name, lock_view.clone(), &view_names),
-                unlock: filter_view_name(
-                    name,
-                    unlock_view.clone(),
-                    &view_names
-                ),
-            },
+        Some(Action::ShowPrefs) => ::action::Action::Submit {
+            text: None,
+            keys: Vec::new(),
         },
-        Some(Action::ShowPrefs) => ::symbol::Symbol {
-            action: ::symbol::Action::Submit {
-                text: None,
-                keys: Vec::new(),
-            },
-        },
-        None => ::symbol::Symbol {
-            action: ::symbol::Action::Submit {
-                text: None,
-                keys: vec!(
-                    ::symbol::KeySym(keysym.unwrap()),
-                ),
-            },
+        None => ::action::Action::Submit {
+            text: None,
+            keys: keysyms.into_iter().map(::action::KeySym).collect(),
         },
     }
 }
@@ -520,9 +584,7 @@ mod tests {
     #[test]
     fn test_parse_path() {
         assert_eq!(
-            Layout::from_yaml_stream(
-                PathBuf::from("tests/layout.yaml")
-            ).unwrap(),
+            Layout::from_file(PathBuf::from("tests/layout.yaml")).unwrap(),
             Layout {
                 row_spacing: 0f64,
                 button_spacing: 0f64,
@@ -553,7 +615,7 @@ mod tests {
     /// Check if the default protection works
     #[test]
     fn test_empty_views() {
-        let out = Layout::from_yaml_stream(PathBuf::from("tests/layout2.yaml"));
+        let out = Layout::from_file(PathBuf::from("tests/layout2.yaml"));
         match out {
             Ok(_) => assert!(false, "Data mistakenly accepted"),
             Err(e) => {
@@ -571,7 +633,7 @@ mod tests {
 
     #[test]
     fn test_extra_field() {
-        let out = Layout::from_yaml_stream(PathBuf::from("tests/layout3.yaml"));
+        let out = Layout::from_file(PathBuf::from("tests/layout3.yaml"));
         match out {
             Ok(_) => assert!(false, "Data mistakenly accepted"),
             Err(e) => {
@@ -590,7 +652,7 @@ mod tests {
     
     #[test]
     fn test_layout_punctuation() {
-        let out = Layout::from_yaml_stream(PathBuf::from("tests/layout_key1.yaml"))
+        let out = Layout::from_file(PathBuf::from("tests/layout_key1.yaml"))
             .unwrap()
             .build()
             .unwrap();
@@ -605,7 +667,7 @@ mod tests {
 
     #[test]
     fn test_layout_unicode() {
-        let out = Layout::from_yaml_stream(PathBuf::from("tests/layout_key2.yaml"))
+        let out = Layout::from_file(PathBuf::from("tests/layout_key2.yaml"))
             .unwrap()
             .build()
             .unwrap();
@@ -617,10 +679,27 @@ mod tests {
             ::layout::Label::Text(CString::new("test").unwrap())
         );
     }
-    
+
+    /// Test multiple codepoints
+    #[test]
+    fn test_layout_unicode_multi() {
+        let out = Layout::from_file(PathBuf::from("tests/layout_key3.yaml"))
+            .unwrap()
+            .build()
+            .unwrap();
+        assert_eq!(
+            out.views["base"]
+                .rows[0]
+                .buttons[0]
+                .state.borrow()
+                .keycodes.len(),
+            2
+        );
+    }
+
     #[test]
     fn parsing_fallback() {
-        assert!(load_layout_from_resource(FALLBACK_LAYOUT_NAME)
+        assert!(Layout::from_resource(FALLBACK_LAYOUT_NAME)
             .and_then(|layout| layout.build().map_err(LoadError::BadKeyMap))
             .is_ok()
         );
@@ -629,7 +708,7 @@ mod tests {
     /// First fallback should be to builtin, not to FALLBACK_LAYOUT_NAME
     #[test]
     fn fallbacks_order() {
-        let (layout, source, _failure) = load_layout(
+        let (_layout, source, _failure) = load_layout(
             "nb",
             Some(PathBuf::from("tests"))
         );
@@ -653,7 +732,7 @@ mod tests {
     #[test]
     fn test_key_unicode() {
         assert_eq!(
-            create_symbol(
+            create_action(
                 &hashmap!{
                     ".".into() => ButtonMeta {
                         icon: None,
@@ -666,11 +745,9 @@ mod tests {
                 ".",
                 Vec::new()
             ),
-            ::symbol::Symbol {
-                action: ::symbol::Action::Submit {
-                    text: None,
-                    keys: vec!(::symbol::KeySym("U002E".into())),
-                },
+            ::action::Action::Submit {
+                text: None,
+                keys: vec!(::action::KeySym("U002E".into())),
             }
         );
     }
