@@ -35,15 +35,15 @@ views:
         - "show_symbols   , \" ' colon ; ! ?  BackSpace"
         - "show_letters show_eschars preferences         space        ? period Return"
     symbols:
-        - "~ ` | · √ π τ ÷ × ¶"
-        - "© ® £ $ ¥ ^ ° * { }"
+        - "~ ` | · π ↑ ÷ × ’ ¶"
+        - "© ® £ $ ← ↓ →  * { }"
         - "show_numbers   \\ / < > = [ ]  BackSpace"
         - "show_letters show_eschars preferences         space        ? period Return"
     eschars:
         - "á é í ó ú Á É Í Ó Ú"
         - "à è ì ò « » ù ! { }"
         - "show_numbers   \\ / < > = [ ]  BackSpace"
-        - "show_letters show_eschars preferences         space        « » Return"
+        - "show_letters show_eschars preferences         space        ^ ° Return"
 
 buttons:
     Shift_L:
