@@ -2,46 +2,39 @@
 row_spacing: 11.33
 button_spacing: 4.67
 
-bounds: { x: 0, y: 1, width: 360, height: 198 }
+bounds: { x: 0, y: 1, width: 426, height: 229 }
 
 outlines:
     default:
-        bounds: { x: 0, y: 0, width: 30.67, height: 40.67 }
+        bounds: { x: 0, y: 0, width: 34, height: 51 }
     altline:
-        bounds: { x: 0, y: 0, width: 48, height: 40.67 }
+        bounds: { x: 0, y: 0, width: 34, height: 51 }
     wide:
-        bounds: { x: 0, y: 0, width: 57.33, height: 40.67 }
+        bounds: { x: 0, y: 0, width: 56, height: 51 }
     spaceline:
-        bounds: { x: 0, y: 0, width: 95.00, height: 40.67 }
-    special:
-        bounds: { x: 0, y: 0, width: 39.33, height: 40.67 }
+        bounds: { x: 0, y: 0, width: 150.5853, height: 51 }
 
 views:
     base:
         - "й ц у к е н г ш щ з х"
         - "ф ы в а п р о л д ж э"
         - "Shift_L я ч с м и т ь б ю BackSpace"
-        - "show_numbers preferences         space        period    Return"
+        - "show_numbers preferences    ё      space   ъ    period    Return"
     upper:
         - "Й Ц У К Е Н Г Ш Щ З Х"
         - "Ф Ы В А П Р О Л Д Ж Э"
         - "Shift_L Я Ч С М И Т Ь Б Ю BackSpace"
-        - "show_numbers preferences         space        period    Return"
+        - "show_numbers preferences    Ё      space   Ъ    period    Return"
     numbers:
         - "1 2 3 4 5 6 7 8 9 0"
         - "@ # € % & - _ + ( )"
         - "show_symbols   , \" ' colon ; ! = BackSpace"
-        - "show_letters show_eschars preferences         space        ? period Return"
+        - "show_letters  preferences         space        ? period Return"
     symbols:
         - "~ ` | · √ π τ ÷ × ¶"
         - "© ® £ $ ¥ ^ ° * { }"
         - "show_numbers   \\ / < > = [ ]  BackSpace"
-        - "show_letters show_eschars preferences         space        ? period Return"
-    eschars:
-        - "á é í ó ú Á É Í Ó Ú"
-        - "à è ì ò ù À È Ì Ò Ù"
-        - "show_numbers ü ç ï Ü Ç Ï ¡  BackSpace"
-        - "show_letters show_eschars preferences         space        « » Return"
+        - "show_letters preferences         space        ? period Return"
 
 buttons:
     Shift_L:
@@ -61,26 +54,18 @@ buttons:
     show_numbers:
         action:
             set_view: "numbers"
-        outline: "altline"
+        outline: "wide"
         label: "123"
     show_letters:
         action:
             set_view: "base"
-        outline: "altline"
+        outline: "wide"
         label: "АБВ"
     show_symbols:
         action:
             set_view: "symbols"
-        outline: "altline"
+        outline: "wide"
         label: "*/="
-    show_eschars:
-        action:
-            locking:
-                lock_view: "eschars"
-                unlock_view: "base"
-        outline: "altline"
-        label: "áÁ"
-
     period:
         outline: "default"
         label: "."
@@ -88,7 +73,7 @@ buttons:
         outline: "spaceline"
         label: " "
     Return:
-        outline: "altline"
+        outline: "wide"
         icon: "key-enter"
     colon:
         label: ":"
