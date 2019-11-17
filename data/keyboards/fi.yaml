@@ -1,6 +1,3 @@
-# Greek layout created by Antonis Tsolomitis
-# University of the Aegean, Department of Mathematics, atsol@aegean.gr
-# Sep 2019
 ---
 bounds: { x: 0, y: 0.33, width: 360, height: 210 }
 
@@ -18,30 +15,26 @@ outlines:
 
 views:
     base:
-        - "; ς ε ρ τ υ θ ι ο π !"
-        - "α σ δ φ γ η ξ κ λ show_accented"
-        - "Shift_L ζ χ ψ ω β ν μ , BackSpace"
-        - "show_numbers preferences space period Return"
+        - "q w e r t y u i o p å"
+        - "a s d f g h j k l ö ä"
+        - "Shift_L   z x c v b n m  BackSpace"
+        - "show_numbers preferences         space        .    Return"
     upper:
-        - ": EuroSign Ε Ρ Τ Υ Θ Ι Ο Π"
-        - "Α Σ Δ Φ Γ Η Ξ Κ Λ show_accented"
-        - "Shift_L Ζ Χ Ψ Ω Β Ν Μ · BackSpace"
-        - "show_numbers preferences space « » Return"
-    accented:
-        - "ά έ ή ί ό ύ ώ ϊ ϋ ΐ"
-        - "ΰ Ά Έ Ή Ί Ό Ύ Ώ Ϊ show_base"
-        - "Ϋ Ϗ ϐ ϑ ϕ ϖ ϗ – — BackSpace"
-        - "show_numbers preferences space quoteleft quoteright Return"
+        - "Q W E R T Y U I O P Å"
+        - "A S D F G H J K L Ö Ä"
+        - "Shift_L   Z X C V B N M  BackSpace"
+        - "show_numbers preferences         space        .    Return"
     numbers:
         - "1 2 3 4 5 6 7 8 9 0"
         - "at numbersign dollar percent ampersand minus underscore plus parenleft parenright"
-        - "show_symbols comma quotedbl quoteright colon semicolon exclam question BackSpace"
-        - "show_letters preferences space period Return"
+        - "show_symbols   comma quotedbl quoteright colon semicolon exclam question  BackSpace"
+        - "show_letters preferences         space        .    Return"
     symbols:
         - "asciitilde quoteleft bar U00B7 squareroot Greek_pi Greek_tau division multiply paragraph"
         - "copyright U00AE U00A3 EuroSign U00A5 asciicircum degree asterisk braceleft braceright"
-        - "show_numbers backslash slash less greater equal bracketleft bracketright  BackSpace"
-        - "show_letters preferences space period Return"
+        - "show_numbers   backslash slash less greater equal bracketleft bracketright  BackSpace"
+        - "show_letters preferences         space        .    Return"
+
 buttons:
     Shift_L:
         action:
@@ -66,27 +59,14 @@ buttons:
         action:
             set_view: "base"
         outline: "altline"
-        label: "ΑΒΓ"
+        label: "ABC"
     show_symbols:
         action:
             set_view: "symbols"
         outline: "altline"
         label: "*/="
-    show_accented:
-        action:
-            locking:
-                lock_view: "accented"
-                unlock_view: "base"
-        outline: "altline"
-        label: "άΐ"
-    show_base:
-        action:
-            set_view: "base"
-        outline: "altline"
-        label: "αι"
-    period:
-        outline: "altline"
-        label: "."
+    ".":
+        outline: altline
     space:
         outline: spaceline
         label: " "
@@ -97,14 +77,14 @@ buttons:
         label: "å"
     Aring:
         label: "Å"
-    oslash:
-        label: "ø"
-    Oslash:
-        label: "Ø"
-    ae:
-        label: "æ"
-    AE:
-        label: "Æ"
+    ouml:
+        label: "ö"
+    Ouml:
+        label: "Ö"
+    auml:
+        label: "ä"
+    Auml:
+        label: "Ä"
     asterisk:
         label: "*"
     asciitilde:

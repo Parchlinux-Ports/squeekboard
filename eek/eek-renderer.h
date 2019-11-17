@@ -24,8 +24,8 @@
 #include <gtk/gtk.h>
 #include <pango/pangocairo.h>
 
-#include "eek-keyboard.h"
 #include "eek-types.h"
+#include "src/layout.h"
 
 G_BEGIN_DECLS
 
@@ -65,7 +65,7 @@ void             eek_renderer_set_allocation_size
 void             eek_renderer_get_size         (EekRenderer     *renderer,
                                                 gdouble         *width,
                                                 gdouble         *height);
-void             eek_renderer_get_button_bounds   (EekRenderer     *renderer,
+void             eek_renderer_get_button_bounds   (EekBounds view_bounds,
                                                 struct button_place *button,
                                                 EekBounds       *bounds,
                                                 gboolean         rotate);
@@ -74,16 +74,13 @@ gdouble          eek_renderer_get_scale        (EekRenderer     *renderer);
 void             eek_renderer_set_scale_factor (EekRenderer     *renderer,
                                                 gint             scale);
 
-PangoLayout     *eek_renderer_create_pango_layout
-                                               (EekRenderer     *renderer);
 void             eek_renderer_render_button       (EekRenderer     *renderer,
                                                 cairo_t         *cr,
                                                 struct button_place *place,
                                                 gdouble          scale,
                                                 gboolean         rotate);
 
-cairo_surface_t *eek_renderer_get_icon_surface (EekRenderer     *renderer,
-                                                const gchar     *icon_name,
+cairo_surface_t *eek_renderer_get_icon_surface(const gchar     *icon_name,
                                                 gint             size,
                                                 gint             scale);
 
@@ -97,19 +94,19 @@ void             eek_renderer_set_default_background_color
                                                (EekRenderer     *renderer,
                                                 const EekColor  *color);
 void             eek_renderer_get_foreground_color
-                                               (EekRenderer     *renderer,
-                                                GtkStyleContext *context,
+                                               (GtkStyleContext *context,
                                                 EekColor        *color);
 void             eek_renderer_set_border_width (EekRenderer     *renderer,
                                                 gdouble          border_width);
-struct squeek_button *eek_renderer_find_button_by_position(EekRenderer     *renderer, struct squeek_view *view,
-                                                gdouble          x,
-                                                gdouble          y);
 void             eek_renderer_apply_transformation_for_button
-                                               (EekRenderer     *renderer,
-                                                cairo_t         *cr, struct button_place *place,
+                                               (cairo_t         *cr,
+                                                EekBounds view_bounds,
+                                                struct button_place *place,
                                                 gdouble          scale,
                                                 gboolean         rotate);
+
+struct transformation
+eek_renderer_get_transformation (EekRenderer *renderer);
 
 G_END_DECLS
 #endif  /* EEK_RENDERER_H */

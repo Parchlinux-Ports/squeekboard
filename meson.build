@@ -1,7 +1,7 @@
 project(
     'squeekboard',
     'c', 'rust',
-    version: '1.2.1',
+    version: '1.3.0',
     license: 'GPLv3',
     meson_version: '>=0.51.0',
     default_options: [
@@ -18,6 +18,7 @@ add_project_arguments(
     '-Werror=maybe-uninitialized',
     '-Werror=missing-field-initializers',
     '-Werror=incompatible-pointer-types',
+    '-Werror=int-conversion',
   ],
   language: 'c'
 )
@@ -60,5 +61,4 @@ subdir('data')
 subdir('protocols')
 subdir('eek')
 subdir('src')
-subdir('po')
 subdir('tests')

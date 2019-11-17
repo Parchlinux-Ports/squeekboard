@@ -1,5 +1,5 @@
-# Italian layout created by Antonio Pandolfo
-# 03 october 2019
+# German layout by Mark Müller
+# Version 2019101900
 ---
 bounds: { x: 0, y: 1, width: 360, height: 210 }
 
@@ -13,34 +13,34 @@ outlines:
     spaceline:
         bounds: { x: 0, y: 0, width: 99.67, height: 52 }
     special:
-        bounds: { x: 0, y: 0, width: 44, height: 52 }
+        bounds: { x: 0, y: 0, width: 35.33, height: 52 }
 
 views:
     base:
-        - "q w e r t y u i o p"
+        - "q w e r t z u i o p"
         - "a s d f g h j k l"
-        - "Shift_L   z x c v b n m  BackSpace"
-        - "show_numbers show_eschars preferences         space        , period Return"
+        - "Shift_L   y x c v b n m  BackSpace"
+        - "show_numbers show_dechars preferences         space        , period Return"
     upper:
-        - "Q W E R T Y U I O P"
+        - "Q W E R T Z U I O P"
         - "A S D F G H J K L"
-        - "Shift_L   Z X C V B N M  BackSpace"
-        - "show_numbers show_eschars preferences         space        , period Return"
+        - "Shift_L   Y X C V B N M  BackSpace"
+        - "show_numbers show_dechars preferences         space        ! ? Return"
     numbers:
         - "1 2 3 4 5 6 7 8 9 0"
         - "@ # € % & - _ + ( )"
-        - "show_symbols   , \" ' colon ; ! ?  BackSpace"
-        - "show_letters show_eschars preferences         space        ? period Return"
+        - "show_symbols   , \" ' colon = < >  BackSpace"
+        - "show_letters show_dechars preferences         space        , period Return"
     symbols:
-        - "~ ` | · √ π τ ÷ × ¶"
+        - "~ ` ´ | · √ µ ÷ × ¶"
         - "© ® £ $ ¥ ^ ° * { }"
-        - "show_numbers   \\ / < > = [ ]  BackSpace"
-        - "show_letters show_eschars preferences         space        ? period Return"
-    eschars:
-        - "á é í ó ú Á É Í Ó Ú"
-        - "à è ì ò « » ù ! { }"
-        - "show_numbers   \\ / < > = [ ]  BackSpace"
-        - "show_letters show_eschars preferences         space        , period Return"
+        - "show_numbers   \\ / § π τ [ ]  BackSpace"
+        - "show_letters show_dechars preferences         space        , period Return"
+    dechars:
+        - "ä è é ö ü Ä È É Ö Ü"
+        - "à â ê î ô À Â È Î Ô"
+        - "show_numbers  « » ç Ç æ œ ß  BackSpace"
+        - "show_letters show_dechars preferences         space        „ “ Return"
 
 buttons:
     Shift_L:
@@ -55,14 +55,9 @@ buttons:
         icon: "edit-clear-symbolic"
     preferences:
         action: "show_prefs"
-        outline: "default"
+        outline: "special"
         icon: "keyboard-mode-symbolic"
     show_numbers:
-        action:
-            set_view: "numbers"
-        outline: "altline"
-        label: "123"
-    show_numbers_from_symbols:
         action:
             set_view: "numbers"
         outline: "altline"
@@ -77,11 +72,17 @@ buttons:
             set_view: "symbols"
         outline: "altline"
         label: "*/="
-    show_eschars:
+    show_dechars:
         action:
-            set_view: "eschars"
+            locking:
+                lock_view: "dechars"
+                unlock_view: "base"
         outline: "altline"
-        label: "à"
+        label: "äÄ"
+
+    period:
+        outline: "default"
+        label: "."
     space:
         outline: "spaceline"
         label: " "

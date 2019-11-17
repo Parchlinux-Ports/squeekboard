@@ -24,6 +24,7 @@
 #include <string.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
+#include "eek-keyboard.h"
 #include "eek-renderer.h"
 
 enum {
@@ -34,10 +35,10 @@ enum {
 
 typedef struct _EekRendererPrivate
 {
-    LevelKeyboard *keyboard;
-    PangoContext *pcontext;
-    GtkCssProvider *css_provider;
-    GtkStyleContext *layout_context;
+    LevelKeyboard *keyboard; // unowned
+    PangoContext *pcontext; // owned
+    GtkCssProvider *css_provider; // owned
+    GtkStyleContext *view_context; // owned
     GtkStyleContext *button_context; // TODO: maybe move a copy to each button
 
     gdouble border_width;
@@ -51,10 +52,6 @@ typedef struct _EekRendererPrivate
 
     PangoFontDescription *ascii_font;
     PangoFontDescription *font;
-    // TODO: Drop those or transform into general button surface caches
-    GHashTable *outline_surface_cache;
-    GHashTable *active_outline_surface_cache;
-    GHashTable *icons;
     cairo_surface_t *keyboard_surface;
 
 } EekRendererPrivate;
@@ -68,7 +65,7 @@ static void eek_renderer_real_render_button_label (EekRenderer *self,
 
 static void invalidate                         (EekRenderer *renderer);
 static void render_button                         (EekRenderer *self,
-                                                cairo_t     *cr, struct button_place *place,
+                                                cairo_t     *cr, EekBounds view_bounds, struct button_place *place,
                                                 gboolean     pressed, gboolean locked);
 
 struct _CreateKeyboardSurfaceCallbackData {
@@ -99,7 +96,7 @@ create_keyboard_surface_button_callback (struct squeek_button *button,
         .row = data->row,
         .button = button,
     };
-    render_button (data->renderer, data->cr, &place, FALSE, FALSE);
+    render_button (data->renderer, data->cr, squeek_view_get_bounds(data->view), &place, FALSE, FALSE);
 
     cairo_restore (data->cr);
 }
@@ -130,7 +127,7 @@ render_keyboard_surface (EekRenderer *renderer, struct squeek_view *view)
     EekRendererPrivate *priv = eek_renderer_get_instance_private (renderer);
     EekColor foreground;
 
-    eek_renderer_get_foreground_color (renderer, priv->layout_context, &foreground);
+    eek_renderer_get_foreground_color (priv->view_context, &foreground);
 
     EekBounds bounds = squeek_view_get_bounds (level_keyboard_current(priv->keyboard));
 
@@ -141,11 +138,11 @@ render_keyboard_surface (EekRenderer *renderer, struct squeek_view *view)
     };
 
     /* Paint the background covering the entire widget area */
-    gtk_render_background (priv->layout_context,
+    gtk_render_background (priv->view_context,
                            data.cr,
                            0, 0,
                            priv->allocation_width, priv->allocation_height);
-    gtk_render_frame (priv->layout_context,
+    gtk_render_frame (priv->view_context,
                       data.cr,
                       0, 0,
                       priv->allocation_width, priv->allocation_height);
@@ -174,28 +171,41 @@ render_outline (cairo_t     *cr,
                 GtkStyleContext *ctx,
                 EekBounds bounds)
 {
-    gtk_render_background (ctx, cr, 0, 0, bounds.width, bounds.height);
-    gtk_render_frame (ctx, cr, 0, 0, bounds.width, bounds.height);
+    GtkBorder margin, border;
+    gtk_style_context_get_margin(ctx, GTK_STATE_FLAG_NORMAL, &margin);
+    gtk_style_context_get_border(ctx, GTK_STATE_FLAG_NORMAL, &border);
+
+    gdouble x = margin.left + border.left;
+    gdouble y = margin.top + border.top;
+    EekBounds position = {
+        .x = x,
+        .y = y,
+        .width = bounds.width - x - (margin.right + border.right),
+        .height = bounds.height - y - (margin.bottom + border.bottom),
+    };
+    gtk_render_background (ctx, cr,
+        position.x, position.y, position.width, position.height);
+    gtk_render_frame (ctx, cr,
+        position.x, position.y, position.width, position.height);
 }
 
 static void render_button_in_context(EekRenderer *self,
+                                     gdouble scale,
+                                     gint scale_factor,
                                      cairo_t     *cr,
                                      GtkStyleContext *ctx,
+                                     EekBounds view_bounds,
                                      struct button_place *place,
                                      gboolean active) {
-    cairo_surface_t *outline_surface;
-    GHashTable *outline_surface_cache;
+    cairo_surface_t *outline_surface = NULL;
     PangoLayout *layout;
     PangoRectangle extents = { 0, };
     EekColor foreground;
-    EekRendererPrivate *priv = eek_renderer_get_instance_private (self);
 
     /* render outline */
     EekBounds bounds = squeek_button_get_bounds(place->button);
 
-    outline_surface = NULL;
-
-    if (!outline_surface) {
+    {
         cairo_t *cr;
 
         // Outline will be drawn on the outside of the button, so the
@@ -211,32 +221,31 @@ static void render_button_in_context(EekRenderer *self,
         cairo_paint (cr);
 
         cairo_save (cr);
-        eek_renderer_apply_transformation_for_button (self, cr, place, 1.0, FALSE);
+        eek_renderer_apply_transformation_for_button (cr, view_bounds, place, 1.0, FALSE);
         render_outline (cr, ctx, bounds);
         cairo_restore (cr);
 
         cairo_destroy (cr);
     }
     cairo_set_source_surface (cr, outline_surface, 0.0, 0.0);
+    cairo_surface_destroy(outline_surface);
     cairo_paint (cr);
 
-    eek_renderer_get_foreground_color (self, ctx, &foreground);
+    eek_renderer_get_foreground_color (ctx, &foreground);
     /* render icon (if any) */
     const char *icon_name = squeek_button_get_icon_name(place->button);
 
     if (icon_name) {
-        gint scale = priv->scale_factor;
         cairo_surface_t *icon_surface =
-            eek_renderer_get_icon_surface (self, icon_name, 16 / priv->scale,
-                                           scale);
+            eek_renderer_get_icon_surface (icon_name, 16, scale_factor);
         if (icon_surface) {
             gint width = cairo_image_surface_get_width (icon_surface);
             gint height = cairo_image_surface_get_height (icon_surface);
 
             cairo_save (cr);
             cairo_translate (cr,
-                             (bounds.width - (double)width / scale) / 2,
-                             (bounds.height - (double)height / scale) / 2);
+                             (bounds.width - (double)width / scale_factor) / 2,
+                             (bounds.height - (double)height / scale_factor) / 2);
             cairo_rectangle (cr, 0, 0, width, height);
             cairo_clip (cr);
             /* Draw the shape of the icon using the foreground color */
@@ -245,8 +254,8 @@ static void render_button_in_context(EekRenderer *self,
                                        foreground.blue,
                                        foreground.alpha);
             cairo_mask_surface (cr, icon_surface, 0.0, 0.0);
+            cairo_surface_destroy(icon_surface);
             cairo_fill (cr);
-
             cairo_restore (cr);
             return;
         }
@@ -270,12 +279,12 @@ static void render_button_in_context(EekRenderer *self,
     pango_cairo_show_layout (cr, layout);
     cairo_restore (cr);
     g_object_unref (layout);
-
 }
 
 static void
 render_button (EekRenderer *self,
             cairo_t     *cr,
+               EekBounds view_bounds,
             struct button_place *place,
                gboolean     pressed,
                gboolean     locked)
@@ -302,7 +311,7 @@ render_button (EekRenderer *self,
     }
     gtk_style_context_add_class(ctx, outline_name);
 
-    render_button_in_context(self, cr, ctx, place, pressed);
+    render_button_in_context(self, priv->scale, priv->scale_factor, cr, ctx, view_bounds, place, pressed);
 
     // Save and restore functions don't work if gtk_render_* was used in between
     gtk_style_context_set_state(ctx, GTK_STATE_FLAG_NORMAL);
@@ -328,8 +337,8 @@ render_button (EekRenderer *self,
  *  normal keys for popups.
 */
 void
-eek_renderer_apply_transformation_for_button (EekRenderer *self,
-                                           cairo_t     *cr,
+eek_renderer_apply_transformation_for_button (cairo_t     *cr,
+                                              EekBounds view_bounds,
                                            struct button_place *place,
                                            gdouble      scale,
                                            gboolean     rotate)
@@ -337,8 +346,8 @@ eek_renderer_apply_transformation_for_button (EekRenderer *self,
     EekBounds bounds, rotated_bounds;
     gdouble s;
 
-    eek_renderer_get_button_bounds (self, place, &bounds, FALSE);
-    eek_renderer_get_button_bounds (self, place, &rotated_bounds, TRUE);
+    eek_renderer_get_button_bounds (view_bounds, place, &bounds, FALSE);
+    eek_renderer_get_button_bounds (view_bounds, place, &rotated_bounds, TRUE);
 
     gint angle = squeek_row_get_angle (place->row);
 
@@ -367,7 +376,6 @@ eek_renderer_real_render_button_label (EekRenderer *self,
     }
 
     PangoFontDescription *font;
-    PangoLayoutLine *line;
     gdouble scale;
 
 
@@ -399,9 +407,10 @@ eek_renderer_real_render_button_label (EekRenderer *self,
     pango_font_description_free (font);
 
     pango_layout_set_text (layout, label, -1);
-    line = pango_layout_get_line (layout, 0);
-    if (line->resolved_dir == PANGO_DIRECTION_RTL)
+    PangoLayoutLine *line = pango_layout_get_line_readonly(layout, 0);
+    if (line->resolved_dir == PANGO_DIRECTION_RTL) {
         pango_layout_set_alignment (layout, PANGO_ALIGN_RIGHT);
+    }
     pango_layout_set_width (layout,
                             PANGO_SCALE * bounds.width * scale);
 }
@@ -427,7 +436,8 @@ eek_renderer_real_render_button (EekRenderer *self,
     EekRendererPrivate *priv = eek_renderer_get_instance_private (self);
     EekBounds bounds;
 
-    eek_renderer_get_button_bounds (self, place, &bounds, rotate);
+    EekBounds view_bounds = squeek_view_get_bounds (level_keyboard_current(priv->keyboard));
+    eek_renderer_get_button_bounds (view_bounds, place, &bounds, rotate);
 
     cairo_save (cr);
     /* Because this function is called separately from the keyboard rendering
@@ -436,12 +446,12 @@ eek_renderer_real_render_button (EekRenderer *self,
     cairo_scale (cr, priv->scale, priv->scale);
     cairo_translate (cr, bounds.x, bounds.y);
 
-    eek_renderer_apply_transformation_for_button (self, cr, place, scale, rotate);
+    eek_renderer_apply_transformation_for_button (cr, view_bounds, place, scale, rotate);
     struct squeek_key *key = squeek_button_get_key(place->button);
     render_button (
-                self, cr, place,
-                squeek_key_is_pressed(key),
-                squeek_key_is_locked (key)
+                self, cr, view_bounds, place,
+                squeek_key_is_pressed(key) != 0,
+                squeek_key_is_locked (key) != 0
     );
     cairo_restore (cr);
 }
@@ -485,7 +495,7 @@ eek_renderer_set_property (GObject      *object,
                            GParamSpec   *pspec)
 {
     EekRendererPrivate *priv = eek_renderer_get_instance_private (
-		    EEK_RENDERER(object));
+            EEK_RENDERER(object));
 
     switch (prop_id) {
     case PROP_PCONTEXT:
@@ -525,8 +535,6 @@ eek_renderer_dispose (GObject *object)
         priv->pcontext = NULL;
     }
 
-    g_clear_pointer (&priv->icons, g_hash_table_destroy);
-
     /* this will release all allocated surfaces and font if any */
     invalidate (EEK_RENDERER(object));
 
@@ -539,8 +547,9 @@ eek_renderer_finalize (GObject *object)
     EekRenderer        *self = EEK_RENDERER(object);
     EekRendererPrivate *priv = eek_renderer_get_instance_private (self);
 
-    g_hash_table_destroy (priv->outline_surface_cache);
-    g_hash_table_destroy (priv->active_outline_surface_cache);
+    g_object_unref(priv->css_provider);
+    g_object_unref(priv->view_context);
+    g_object_unref(priv->button_context);
     pango_font_description_free (priv->ascii_font);
     pango_font_description_free (priv->font);
     G_OBJECT_CLASS (eek_renderer_parent_class)->finalize (object);
@@ -581,7 +590,7 @@ static GType new_type(char *name) {
     );
 }
 
-static GType layout_type() {
+static GType view_type() {
     static GType type = 0;
     if (!type) {
         type = new_type("sq_view");
@@ -610,67 +619,22 @@ eek_renderer_init (EekRenderer *self)
     priv->scale = 1.0;
     priv->scale_factor = 1;
     priv->font = NULL;
-    priv->outline_surface_cache =
-        g_hash_table_new_full (g_direct_hash,
-                               g_direct_equal,
-                               NULL,
-                               (GDestroyNotify)cairo_surface_destroy);
-    priv->active_outline_surface_cache =
-        g_hash_table_new_full (g_direct_hash,
-                               g_direct_equal,
-                               NULL,
-                               (GDestroyNotify)cairo_surface_destroy);
     priv->keyboard_surface = NULL;
 
     GtkIconTheme *theme = gtk_icon_theme_get_default ();
 
     gtk_icon_theme_add_resource_path (theme, "/sm/puri/squeekboard/icons");
-    priv->icons = g_hash_table_new_full (g_str_hash,
-                                         g_str_equal,
-                                         g_free,
-                                         (GDestroyNotify)cairo_surface_destroy);
 
     /* Create a default CSS provider and load a style sheet */
     priv->css_provider = gtk_css_provider_new ();
     gtk_css_provider_load_from_resource (priv->css_provider,
         "/sm/puri/squeekboard/style.css");
-
-    /* Create a style context for the layout */
-    GtkWidgetPath *path = gtk_widget_path_new();
-    gtk_widget_path_append_type(path, layout_type());
-
-    priv->layout_context = gtk_style_context_new();
-    gtk_style_context_set_path(priv->layout_context, path);
-    gtk_widget_path_unref(path);
-    gtk_style_context_add_provider (priv->layout_context,
-        GTK_STYLE_PROVIDER(priv->css_provider),
-        GTK_STYLE_PROVIDER_PRIORITY_USER);
-
-    /* Create a style context for the buttons */
-    path = gtk_widget_path_new();
-    gtk_widget_path_append_type(path, layout_type());
-    gtk_widget_path_append_type(path, button_type());
-    priv->button_context = gtk_style_context_new ();
-    gtk_style_context_set_path(priv->button_context, path);
-    gtk_widget_path_unref(path);
-
-    gtk_style_context_set_parent(priv->button_context, priv->layout_context);
-    gtk_style_context_set_state (priv->button_context, GTK_STATE_FLAG_NORMAL);
-    gtk_style_context_add_provider (priv->button_context,
-        GTK_STYLE_PROVIDER(priv->css_provider),
-        GTK_STYLE_PROVIDER_PRIORITY_USER);
 }
 
 static void
 invalidate (EekRenderer *renderer)
 {
     EekRendererPrivate *priv = eek_renderer_get_instance_private (renderer);
-
-    if (priv->outline_surface_cache)
-        g_hash_table_remove_all (priv->outline_surface_cache);
-
-    if (priv->active_outline_surface_cache)
-        g_hash_table_remove_all (priv->active_outline_surface_cache);
 
     if (priv->keyboard_surface) {
         cairo_surface_destroy (priv->keyboard_surface);
@@ -687,6 +651,36 @@ eek_renderer_new (LevelKeyboard  *keyboard,
                          NULL);
     EekRendererPrivate *priv = eek_renderer_get_instance_private (renderer);
     priv->keyboard = keyboard;
+
+    /* Create a style context for the layout */
+    GtkWidgetPath *path = gtk_widget_path_new();
+    gtk_widget_path_append_type(path, view_type());
+
+    priv->view_context = gtk_style_context_new();
+    gtk_style_context_set_path(priv->view_context, path);
+    gtk_widget_path_unref(path);
+    if (squeek_layout_get_kind(priv->keyboard->layout) == ARRANGEMENT_KIND_WIDE) {
+        gtk_style_context_add_class(priv->view_context, "wide");
+    }
+    gtk_style_context_add_provider (priv->view_context,
+        GTK_STYLE_PROVIDER(priv->css_provider),
+        GTK_STYLE_PROVIDER_PRIORITY_USER);
+
+    /* Create a style context for the buttons */
+    path = gtk_widget_path_new();
+    gtk_widget_path_append_type(path, view_type());
+    if (squeek_layout_get_kind(priv->keyboard->layout) == ARRANGEMENT_KIND_WIDE) {
+        gtk_widget_path_iter_add_class(path, -1, "wide");
+    }
+    gtk_widget_path_append_type(path, button_type());
+    priv->button_context = gtk_style_context_new ();
+    gtk_style_context_set_path(priv->button_context, path);
+    gtk_widget_path_unref(path);
+    gtk_style_context_set_parent(priv->button_context, priv->view_context);
+    gtk_style_context_set_state (priv->button_context, GTK_STATE_FLAG_NORMAL);
+    gtk_style_context_add_provider (priv->button_context,
+        GTK_STYLE_PROVIDER(priv->css_provider),
+        GTK_STYLE_PROVIDER_PRIORITY_USER);
     return renderer;
 }
 
@@ -738,7 +732,7 @@ eek_renderer_get_size (EekRenderer *renderer,
 }
 
 void
-eek_renderer_get_button_bounds (EekRenderer *renderer,
+eek_renderer_get_button_bounds (EekBounds view_bounds,
                                 struct button_place *place,
                              EekBounds   *bounds,
                              gboolean     rotate)
@@ -746,15 +740,11 @@ eek_renderer_get_button_bounds (EekRenderer *renderer,
     gint angle = 0;
     EekPoint points[4], min, max;
 
-    g_return_if_fail (EEK_IS_RENDERER(renderer));
     g_return_if_fail (place);
     g_return_if_fail (bounds != NULL);
 
-    EekRendererPrivate *priv = eek_renderer_get_instance_private (renderer);
-
     EekBounds button_bounds = squeek_button_get_bounds(place->button);
     EekBounds row_bounds = squeek_row_get_bounds (place->row);
-    EekBounds view_bounds = squeek_view_get_bounds (level_keyboard_current(priv->keyboard));
 
     if (!rotate) {
         button_bounds.x += view_bounds.x + row_bounds.x;
@@ -813,46 +803,26 @@ eek_renderer_set_scale_factor (EekRenderer *renderer, gint scale)
     priv->scale_factor = scale;
 }
 
-PangoLayout *
-eek_renderer_create_pango_layout (EekRenderer  *renderer)
-{
-    g_return_val_if_fail (EEK_IS_RENDERER(renderer), NULL);
-
-    EekRendererPrivate *priv = eek_renderer_get_instance_private (renderer);
-
-    return pango_layout_new (priv->pcontext);
-}
-
 cairo_surface_t *
-eek_renderer_get_icon_surface (EekRenderer *renderer,
-                               const gchar *icon_name,
+eek_renderer_get_icon_surface (const gchar *icon_name,
                                gint size,
                                gint scale)
 {
     GError *error = NULL;
-    cairo_surface_t *surface;
+    cairo_surface_t *surface = gtk_icon_theme_load_surface (gtk_icon_theme_get_default (),
+                                                            icon_name,
+                                                            size,
+                                                            scale,
+                                                            NULL,
+                                                            0,
+                                                            &error);
 
-    g_return_val_if_fail (EEK_IS_RENDERER(renderer), NULL);
-
-    EekRendererPrivate *priv = eek_renderer_get_instance_private (renderer);
-
-    surface = g_hash_table_lookup (priv->icons, icon_name);
-    if (!surface) {
-        surface = gtk_icon_theme_load_surface (gtk_icon_theme_get_default (),
-                                               icon_name,
-                                               size,
-                                               scale,
-                                               NULL,
-                                               0,
-                                               &error);
-        g_hash_table_insert (priv->icons, g_strdup(icon_name), surface);
-        if (surface == NULL) {
-            g_warning ("can't get icon surface for %s: %s",
-                       icon_name,
-                       error->message);
-            g_error_free (error);
-            return NULL;
-        }
+    if (surface == NULL) {
+        g_warning ("can't get icon surface for %s: %s",
+                   icon_name,
+                   error->message);
+        g_error_free (error);
+        return NULL;
     }
     return surface;
 }
@@ -881,11 +851,9 @@ eek_renderer_render_keyboard (EekRenderer *renderer,
 }
 
 void
-eek_renderer_get_foreground_color (EekRenderer *renderer,
-                                   GtkStyleContext *context,
+eek_renderer_get_foreground_color (GtkStyleContext *context,
                                    EekColor    *color)
 {
-    g_return_if_fail (EEK_IS_RENDERER(renderer));
     g_return_if_fail (color);
 
     GtkStateFlags flags = GTK_STATE_FLAG_NORMAL;
@@ -945,29 +913,16 @@ eek_are_bounds_inside (EekBounds bounds, EekPoint point, EekPoint origin, int32_
     return 0;
 }
 
-/**
- * eek_renderer_find_key_by_position:
- * @renderer: The renderer normally used to render the key
- * @x: The horizontal widget coordinate of the position to test for a key
- * @y: The vertical widget coordinate of the position to test for a key
- *
- * Return value: the key located at the position x, y in widget coordinates, or
- *   NULL if no key can be found at that location
- **/
-struct squeek_button *
-eek_renderer_find_button_by_position (EekRenderer *renderer,
-                                      struct squeek_view *view,
-                                      gdouble      x,
-                                      gdouble      y)
-{
-    g_return_val_if_fail (EEK_IS_RENDERER(renderer), NULL);
+struct transformation
+eek_renderer_get_transformation (EekRenderer *renderer) {
+    struct transformation failed = {0};
+    g_return_val_if_fail (EEK_IS_RENDERER(renderer), failed);
 
     EekRendererPrivate *priv = eek_renderer_get_instance_private (renderer);
-
-    /* Transform from widget coordinates to keyboard coordinates */
-    EekPoint point = {
-        .x = (x - priv->origin_x)/priv->scale,
-        .y = (y - priv->origin_y)/priv->scale,
+    struct transformation ret = {
+        .origin_x = priv->origin_x,
+        .origin_y = priv->origin_y,
+        .scale = priv->scale,
     };
-    return squeek_view_find_button_by_position(view, point);
+    return ret;
 }

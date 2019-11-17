@@ -4,13 +4,18 @@ sq_view {
     font-family: cantarell, sans-serif;
 }
 
-sq_button {
+sq_view sq_button {
     color: #deddda;
     background: #464448;
     border-style: solid;
     border-width: 1px;
     border-color: #5e5c64;
     border-radius: 3px;
+    margin: 4px 2px 4px 2px;
+}
+
+sq_view.wide sq_button {
+    margin: 1px 1px 1px 1px;
 }
 
 sq_button:active {
@@ -22,7 +27,7 @@ sq_button.altline,
 sq_button.special,
 sq_button.wide {
     background: #2b292f;
-    border-color: #3e3a44
+    border-color: #3e3a44;
 }
 
 sq_button.locked {
@@ -32,7 +37,7 @@ sq_button.locked {
 
 #Return {
     background: #1c71d8;
-    border-color: #1a5fb4
+    border-color: #1a5fb4;
 }
 
 #Return:active {
