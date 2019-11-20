@@ -39,6 +39,7 @@ cc = meson.get_compiler('c')
 
 deps = [
 #  dependency('glib-2.0', version: '>=2.26.0'),
+  dependency('dbus-1', version: '>=1.3'),
   dependency('gio-2.0', version: '>=2.26.0'),
   dependency('gtk+-3.0', version: '>=3.0'),
   dependency('libcroco-0.6'),

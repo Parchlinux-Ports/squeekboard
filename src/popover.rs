@@ -110,14 +110,11 @@ pub fn show(window: EekGtkKeyboard, position: ::layout::c::Bounds) {
         .map(|(_kind, name)| name.as_str())
         .collect();
 
-    let translations = system_locale()
-        .map(|locale|
-            locale.tags_for("messages")
-                .next().unwrap() // guaranteed to exist
-                .as_ref()
-                .to_owned()
-        )
-        .and_then(|lang| resources::get_layout_names(lang.as_str()));
+    let translations = resources::get_layout_names(system_locale()
+        .tags_for("messages")
+        .next().unwrap() // guaranteed to exist by locale_config
+        .as_ref()
+    );
 
     // sorted collection of human and machine names
     let mut human_names: Vec<(&str, &str)> = match translations {

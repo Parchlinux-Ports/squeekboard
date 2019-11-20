@@ -1,8 +1,8 @@
 /*! Locale detection and management.
  * Based on https://github.com/rust-locale/locale_config
  * 
- * Ready for deletion/replacement once Debian starts packaging this,
- * although this version doesn't need lazy_static.
+ * Modified for dbus querying.
+ * This version doesn't need lazy_static.
  * 
  * Copyright (c) 2016–2019 Jan Hudec <bulb@ucw.cz>
    Copyright (c) 2016 A.J. Gardner <aaron.j.gardner@gmail.com>
@@ -11,9 +11,12 @@
    Copyright (c) 2019, Sophie Tauchert <999eagle@999eagle.moe>
  */
 
+use dbus::Connection;
 use regex::Regex;
 use std::borrow::Cow;
 use std::env;
+
+use dbus::stdintf::org_freedesktop_dbus::Properties;
 
 /// Errors that may be returned by `locale_config`.
 #[derive(Copy,Clone,Debug,PartialEq,Eq)]
@@ -463,19 +466,23 @@ fn tag(s: &str) -> Result<LanguageRange> {
 
 // TODO: Read /etc/locale.alias
 fn tag_inv(s: &str) -> LanguageRange {
-    tag(s).unwrap_or(LanguageRange::invariant())
+    tag(s).unwrap_or_else(|_e| LanguageRange::invariant())
 }
 
-pub fn system_locale() -> Option<Locale> {
+/// Returns the locale using Unix roles and the given lookup method.
+// TODO: maybe don't drop all errors on the floor like that
+fn unix_locale<'a, 'b, F, E>(get: F) -> Locale
+    where F: Fn(&'a str) -> ::std::result::Result<String, E>
+{
     // LC_ALL overrides everything
-    if let Ok(all) = env::var("LC_ALL") {
+    if let Ok(all) = get("LC_ALL") {
         if let Ok(t) = tag(all.as_ref()) {
-            return Some(Locale::from(t));
+            return Locale::from(t);
         }
     }
     // LANG is default
     let mut loc =
-        if let Ok(lang) = env::var("LANG") {
+        if let Ok(lang) = get("LANG") {
             Locale::from(tag_inv(lang.as_ref()))
         } else {
             Locale::invariant()
@@ -494,7 +501,7 @@ pub fn system_locale() -> Option<Locale> {
         ("telephone",   "LC_TELEPHONE"),
         ("measurement", "LC_MEASUREMENT"),
     ].iter() {
-        if let Ok(val) = env::var(var) {
+        if let Ok(val) = get(var) {
             if let Ok(tag) = tag(val.as_ref())
             {
                 loc.add_category(cat, &tag);
@@ -502,7 +509,7 @@ pub fn system_locale() -> Option<Locale> {
         }
     }
     // LANGUAGE defines fallbacks
-    if let Ok(langs) = env::var("LANGUAGE") {
+    if let Ok(langs) = get("LANGUAGE") {
         for i in langs.split(':') {
             if i != "" {
                 if let Ok(tag) = tag(i) {
@@ -511,16 +518,44 @@ pub fn system_locale() -> Option<Locale> {
             }
         }
     }
-    if loc.as_ref() != "" {
-        return Some(loc);
-    } else {
-        return None;
-    }
+
+    loc
+}
+
+fn env_locale() -> Locale {
+    unix_locale(env::var)
+}
+
+fn dbus_locale()
+    -> std::result::Result<Locale, Box<dyn std::error::Error>> 
+{
+    let connection = Connection::get_private(dbus::BusType::Session)?;
+    let property = connection.with_path(
+        "org.freedesktop.locale1", "/org/freedesktop/locale1", 100
+    );
+    let locales: Vec<String>
+        = property.get("org.freedesktop.locale1", "Locale")?;
+    
+    let val_pairs: Vec<(String, String)> = locales.into_iter().map(|s| {
+        let mut splits = s.splitn(2, "=");
+        (splits.next().unwrap().into(), splits.next().unwrap_or("").into())
+    }).collect();
+
+    Ok(unix_locale(|var| {
+        match val_pairs.iter().find(|(name, _val)| name == &var) {
+            Some((_name, val)) => Ok(val.clone()),
+            None => Err(()),
+        }
+    }))
+}
+
+pub fn system_locale() -> Locale {
+    dbus_locale().unwrap_or_else(|_e| env_locale())
 }
 
 #[cfg(test)]
 mod test {
-    use super::LanguageRange;
+    use super::*;
 
     #[test]
     fn unix_tags() {

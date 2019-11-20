@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate bitflags;
+extern crate dbus;
 extern crate gio;
 extern crate glib;
 extern crate glib_sys;
