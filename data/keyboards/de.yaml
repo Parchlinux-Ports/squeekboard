@@ -1,5 +1,6 @@
 # German layout by Mark Müller
-# Version 2019111700
+# edited by Daniel Scharon
+# Version 2019112900
 ---
 bounds: { x: 0, y: 1, width: 360, height: 208 }
 
@@ -17,13 +18,13 @@ outlines:
 
 views:
     base:
-        - "q w e r t z u i o p"
-        - "a s d f g h j k l"
+        - "q w e r t z u i o p ü"
+        - "a s d f g h j k l ö ä"
         - "Shift_L   y x c v b n m  BackSpace"
         - "show_numbers show_eschars preferences         space        , . Return"
     upper:
-        - "Q W E R T Z U I O P"
-        - "A S D F G H J K L"
+        - "Q W E R T Z U I O P Ü"
+        - "A S D F G H J K L Ö Ä"
         - "Shift_L   Y X C V B N M  BackSpace"
         - "show_numbers show_dechars preferences         space        ! ? Return"
     numbers:
