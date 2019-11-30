@@ -41,14 +41,29 @@ pub enum PressType {
     Pressed = 1,
 }
 
+pub type KeyCode = u32;
+
 #[derive(Debug, Clone)]
 pub struct KeyState {
     pub pressed: PressType,
     pub locked: bool,
     /// A cache of raw keycodes derived from Action::Sumbit given a keymap
-    pub keycodes: Vec<u32>,
+    pub keycodes: Vec<KeyCode>,
     /// Static description of what the key does when pressed or released
     pub action: Action,
+}
+
+impl KeyState {
+    #[must_use]
+    pub fn activate(self) -> KeyState {
+        match self.action {
+            Action::LockLevel { lock: _, unlock: _ } => KeyState {
+                locked: self.locked ^ true,
+                ..self
+            },
+            _ => self,
+        }
+    }
 }
 
 /// Generates a mapping where each key gets a keycode, starting from ~~8~~

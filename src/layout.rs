@@ -27,8 +27,10 @@ use ::action::Action;
 use ::float_ord::FloatOrd;
 use ::keyboard::{ KeyState, PressType };
 use ::submission::{ Timestamp, VirtualKeyboard };
+use ::util;
 
 use std::borrow::Borrow;
+use std::iter::FromIterator;
 
 /// Gathers stuff defined in C or called by C
 pub mod c {
@@ -354,7 +356,8 @@ pub mod c {
             let virtual_keyboard = VirtualKeyboard(virtual_keyboard);
             // The list must be copied,
             // because it will be mutated in the loop
-            for key in layout.pressed_keys.clone() {
+            let keys = layout.get_pressed_keys();
+            for key in keys {
                 let key: &Rc<RefCell<KeyState>> = key.borrow();
                 ui::release_key(
                     layout,
@@ -377,9 +380,8 @@ pub mod c {
         ) {
             let layout = unsafe { &mut *layout };
             let virtual_keyboard = VirtualKeyboard(virtual_keyboard);
-            // The list must be copied,
-            // because it will be mutated in the loop
-            for key in layout.pressed_keys.clone() {
+
+            for key in layout.get_pressed_keys() {
                 let key: &Rc<RefCell<KeyState>> = key.borrow();
                 layout.release_key(
                     &virtual_keyboard,
@@ -448,7 +450,7 @@ pub mod c {
                 Point { x: x_widget, y: y_widget }
             );
             
-            let pressed = layout.pressed_keys.clone();
+            let pressed = layout.get_pressed_keys();
             let state_place = {
                 let view = layout.get_current_view();
                 let place = view.find_button_by_position(point);
@@ -460,9 +462,8 @@ pub mod c {
 
             if let Some((mut state, c_place)) = state_place {
                 let mut found = false;
-                for wrapped_key in pressed {
-                    let key: &Rc<RefCell<KeyState>> = wrapped_key.borrow();
-                    if Rc::ptr_eq(&state, &wrapped_key.0) {
+                for key in pressed {
+                    if Rc::ptr_eq(&state, &key) {
                         found = true;
                     } else {
                         ui::release_key(
@@ -471,7 +472,7 @@ pub mod c {
                             &widget_to_layout,
                             time,
                             ui_keyboard,
-                            key,
+                            &key,
                         );
                     }
                 }
@@ -480,15 +481,14 @@ pub mod c {
                     unsafe { eek_gtk_on_button_pressed(c_place, ui_keyboard) };
                 }
             } else {
-                for wrapped_key in pressed {
-                    let key: &Rc<RefCell<KeyState>> = wrapped_key.borrow();
+                for key in pressed {
                     ui::release_key(
                         layout,
                         &virtual_keyboard,
                         &widget_to_layout,
                         time,
                         ui_keyboard,
-                        key,
+                        &key,
                     );
                 }
             }
@@ -755,15 +755,7 @@ pub struct Layout {
     /// xkb keymap applicable to the contained keys. Unchangeable
     pub keymap_str: CString,
     // Changeable state
-    // a Vec would be enough, but who cares, this will be small & fast enough
-    // TODO: turn those into per-input point *_buttons to track dragging.
-    // The renderer doesn't need the list of pressed keys any more,
-    // because it needs to iterate
-    // through all buttons of the current view anyway.
-    // When the list tracks actual location,
-    // it becomes possible to place popovers and other UI accurately.
-    pub pressed_keys: HashSet<::util::Pointer<RefCell<KeyState>>>,
-    pub locked_keys: HashSet<::util::Pointer<RefCell<KeyState>>>,
+    // TODO: store clicked buttons per-input point to track dragging.
 }
 
 /// A builder structure for picking up layout data from storage
@@ -785,12 +777,51 @@ impl Layout {
             current_view: "base".to_owned(),
             views: data.views,
             keymap_str: data.keymap_str,
-            pressed_keys: HashSet::new(),
-            locked_keys: HashSet::new(),
         }
     }
     fn get_current_view(&self) -> &Box<View> {
         self.views.get(&self.current_view).expect("Selected nonexistent view")
+    }
+
+    /// Returns all keys matching filter, without duplicates
+    fn get_filtered_keys<F>(&self, pred: F) -> Vec<Rc<RefCell<KeyState>>>
+        where F: Fn(&Box<Button>) -> Option<Rc<RefCell<KeyState>>>
+    {
+        let keys = self.views.iter().flat_map(|(_name, view)| {
+            view.rows.iter().flat_map(|row| {
+                row.buttons.iter().filter_map(|x| pred(x))
+            })
+        });
+        // Key states can be attached to multiple buttons, so duplicates must
+        // be removed
+        let unique: HashSet<util::Pointer<RefCell<KeyState>>>
+            = HashSet::from_iter(
+                keys.map(|key| util::Pointer(key.clone()))
+            );
+        
+        unique.into_iter()
+            .map(|ptr| ptr.0)
+            .collect()
+    }
+
+    fn get_pressed_keys(&self) -> Vec<Rc<RefCell<KeyState>>> {
+        self.get_filtered_keys(|button| {
+            let pressed = RefCell::borrow(&button.state).pressed;
+            match pressed {
+                PressType::Pressed => Some(button.state.clone()),
+                PressType::Released => None
+            }
+        })
+    }
+
+    fn get_locked_keys(&self) -> Vec<Rc<RefCell<KeyState>>> {
+        self.get_filtered_keys(|button| {
+            let locked = RefCell::borrow(&button.state).locked;
+            match locked {
+                true => Some(button.state.clone()),
+                false => None
+            }
+        })
     }
 
     fn set_view(&mut self, view: String) -> Result<(), NoSuchView> {
@@ -808,14 +839,15 @@ impl Layout {
         mut key: &mut Rc<RefCell<KeyState>>,
         time: Timestamp,
     ) {
-        if !self.pressed_keys.remove(&::util::Pointer(key.clone())) {
-            eprintln!("Warning: key {:?} was not pressed", key);
+        {
+            let mut bkey = key.borrow_mut();
+            virtual_keyboard.switch(
+                &bkey.keycodes,
+                PressType::Released,
+                time,
+            );
+            bkey.pressed = PressType::Released;
         }
-        virtual_keyboard.switch(
-            &mut key.borrow_mut(),
-            PressType::Released,
-            time,
-        );
         self.set_level_from_press(&mut key);
     }
     
@@ -825,51 +857,44 @@ impl Layout {
         key: &mut Rc<RefCell<KeyState>>,
         time: Timestamp,
     ) {
-        if !self.pressed_keys.insert(::util::Pointer(key.clone())) {
-            eprintln!("Warning: key {:?} was already pressed", key);
-        }
+        let mut bkey = key.borrow_mut();
         virtual_keyboard.switch(
-            &mut key.borrow_mut(),
+            &bkey.keycodes,
             PressType::Pressed,
             time,
         );
+        bkey.pressed = PressType::Pressed;
     }
 
     fn set_level_from_press(&mut self, key: &Rc<RefCell<KeyState>>) {
-        let keys = self.locked_keys.clone();
+        fn activate(layout: &mut Layout, key: &Rc<RefCell<KeyState>>) {
+            let updated = {
+                let keyref = RefCell::borrow(key);
+                keyref.clone().activate()
+            };
+            RefCell::replace(key, updated.clone());
+            layout.set_state_from_press(updated.action.clone(), updated.locked);
+        };
+
+        // unlock all
+        let keys = self.get_locked_keys();
         for key in &keys {
-            self.locked_keys.remove(key);
-            self.set_state_from_press(key.borrow());
+            activate(self, key);
         }
 
         // Don't handle the same key twice, but handle it at least once,
         // because its press is the reason we're here
-        if !keys.contains(&::util::Pointer(key.clone())) {
-            self.set_state_from_press(key);
+        if let None = keys.iter().find(|k| Rc::ptr_eq(k, &key)) {
+            activate(self, key);
         }
     }
 
-    fn set_state_from_press(&mut self, key: &Rc<RefCell<KeyState>>) {
-        // Action should not hold a reference to key,
-        // because key is later borrowed for mutation. So action is cloned.
-        // RefCell::borrow() is covered up by (dyn Borrow)::borrow()
-        // if used like key.borrow() :(
-        let action = RefCell::borrow(key).action.clone();
+    fn set_state_from_press(&mut self, action: Action, locked: bool) {
         let view_name = match action {
             Action::SetLevel(name) => {
                 Some(name.clone())
             },
             Action::LockLevel { lock, unlock } => {
-                let locked = {
-                    let mut key = key.borrow_mut();
-                    key.locked ^= true;
-                    key.locked
-                };
-
-                if locked {
-                    self.locked_keys.insert(::util::Pointer(key.clone()));
-                }
-
                 Some(if locked { lock } else { unlock }.clone())
             },
             _ => None,
