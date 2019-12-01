@@ -55,13 +55,25 @@ pub struct KeyState {
 
 impl KeyState {
     #[must_use]
-    pub fn activate(self) -> KeyState {
+    pub fn into_activated(self) -> KeyState {
         match self.action {
-            Action::LockLevel { lock: _, unlock: _ } => KeyState {
+            Action::LockView { lock: _, unlock: _ } => KeyState {
                 locked: self.locked ^ true,
                 ..self
             },
             _ => self,
+        }
+    }
+
+    #[must_use]
+    pub fn into_switched(self) -> KeyState {
+        use self::PressType::*;
+        KeyState {
+            pressed: match self.pressed {
+                Released => Pressed,
+                Pressed => Released,
+            },
+            ..self
         }
     }
 }

@@ -198,6 +198,9 @@ pub trait WarningHandler {
     fn handle(&mut self, warning: &str);
 }
 
+/// TODO: only allow indexing, push, peek, and pop
+pub type Stack<T> = Vec<T>;
+
 #[cfg(test)]
 mod tests {
     use super::*;
