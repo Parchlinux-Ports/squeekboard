@@ -1,8 +1,17 @@
+#[macro_use]
+extern crate clap;
 extern crate rs;
 
 use rs::tests::check_layout_file;
-use std::env;
 
 fn main() -> () {
-    check_layout_file(env::args().nth(1).expect("No argument given").as_str());
+    let matches = clap_app!(test_layout =>
+        (name: "squeekboard-test-layout")
+        (version: env!("CARGO_PKG_VERSION"))
+        (about: "Test keyboard layout for errors. Returns OK or an error message containing further information.")
+        (@arg INPUT: +required "Yaml keyboard layout file to test")
+    ).get_matches();
+    if check_layout_file(matches.value_of("INPUT").unwrap()) == () {
+        println!("Test result: OK");
+    }
 }
