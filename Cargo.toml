@@ -4,12 +4,12 @@ version = "0.1.0"
 
 [dependencies]
 bitflags = "1.0.*"
+clap = "2.32.*"
 maplit = "1.0.*"
 regex = "1.1.*"
 serde = { version = "1.0.*", features = ["derive"] }
 serde_yaml = "0.8.*"
 xkbcommon = { version = "0.4.*", features = ["wayland"] }
-clap = "2"
 
 [dependencies.gio]
 version = ""
