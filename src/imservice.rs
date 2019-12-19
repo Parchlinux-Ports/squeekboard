@@ -102,8 +102,12 @@ pub mod c {
         imservice.pending = IMProtocolState {
             content_hint: {
                 ContentHint::from_bits(hint).unwrap_or_else(|| {
-                    eprintln!("Warning: received invalid hint flags");
-                    ContentHint::NONE
+                    let out = ContentHint::from_bits_truncate(hint);
+                    eprintln!(
+                        "Warning: received hint flags with unknown bits set: 0x{:x}",
+                        hint ^ out.bits(),
+                    );
+                    out
                 })
             },
             content_purpose: {
