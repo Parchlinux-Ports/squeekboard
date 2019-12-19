@@ -223,6 +223,7 @@ bitflags!{
         const SENSITIVE_DATA = 0x80;
         const LATIN = 0x100;
         const MULTILINE = 0x200;
+        const ON_SCREEN_INPUT_PROVIDED = 0x400;
     }
 }
 
