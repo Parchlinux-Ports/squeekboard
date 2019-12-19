@@ -145,6 +145,16 @@ pub mod c {
     {
         let imservice = check_imservice(imservice, im).unwrap();
         let active_changed = imservice.current.active ^ imservice.pending.active;
+
+        fn is_visible(state: &IMProtocolState) -> bool {
+            state.active
+                && !state.content_hint.contains(
+                    ContentHint::ON_SCREEN_INPUT_PROVIDED
+                )
+        }
+
+        let visible_changed = is_visible(&imservice.current)
+            ^ is_visible(&imservice.pending);
         
         imservice.serial += Wrapping(1u32);
         imservice.current = imservice.pending.clone();
@@ -152,13 +162,18 @@ pub mod c {
             active: imservice.current.active,
             ..IMProtocolState::default()
         };
-        if active_changed {
-            if imservice.current.active {
+
+        if active_changed && imservice.current.active {
+            eekboard_context_service_set_hint_purpose(
+                imservice.ui_manager,
+                imservice.current.content_hint.bits(),
+                imservice.current.content_purpose.clone() as u32,
+            );
+        }
+        
+        if visible_changed {
+            if is_visible(&imservice.current) {
                 eekboard_context_service_show_keyboard(imservice.ui_manager);
-                eekboard_context_service_set_hint_purpose(
-                    imservice.ui_manager,
-                    imservice.current.content_hint.bits(),
-                    imservice.current.content_purpose.clone() as u32);
             } else {
                 eekboard_context_service_hide_keyboard(imservice.ui_manager);
             }
