@@ -8,6 +8,8 @@
  */
 
 use std::cmp::min;
+
+use ::logging;
 use ::outputs::c::OutputHandle;
 
 mod c {
@@ -57,6 +59,43 @@ pub struct Manager {
 }
 
 impl Manager {
+    /// The largest ideal heigth for the keyboard as a whole
+    /// judged by the ease of hitting targets within.
+    /// Ideally related to finger size, the crammedness of the layout,
+    /// distance from display, and motor skills of the user.
+    // FIXME: Start by making this aware of display's dpi,
+    // then layout number of rows.
+    fn get_max_target_height(&self) -> u32 {
+        let layout_rows = 4; // FIXME: use number from layout.
+        let (scale, px_size, phys_size) = (&self.output).as_ref()
+            .and_then(|o| o.get_state())
+            .map(|os| (os.scale as u32, os.get_pixel_size(), os.get_phys_size()))
+            .unwrap_or((1, None, None));
+
+        let finger_height_px = match (px_size, phys_size) {
+            (Some(px_size), Some(phys_size)) => {
+                // Fudged to result in 420px from the original design.
+                // That gives about 9.5mm per finger height.
+                // Maybe floats are not the best choice here,
+                // but it gets rounded ASAP. Consider rationals.
+                let keyboard_fraction_of_display: f64 = 420. / 1440.;
+                let keyboard_mm = keyboard_fraction_of_display * 130.;
+                let finger_height_mm = keyboard_mm / 4.;
+                // TODO: Take into account target shape/area, not just height.
+                finger_height_mm * px_size.height as f64 / phys_size.height as f64
+            },
+            (_, None) => scale as f64 * 52.5, // match total 420px at scale 2 from original design
+            (None, Some(_)) => {
+                log_print!(
+                    logging::Level::Surprise,
+                    "Output has physical size data but no pixel info",
+                );
+                scale as f64 * 52.5
+            },
+        };
+        (layout_rows as f64 * finger_height_px) as u32
+    }
+
     fn get_perceptual_height(&self) -> Option<u32> {
         let output_info = (&self.output).as_ref()
             .and_then(|o| o.get_state())
@@ -71,8 +110,11 @@ impl Manager {
                     360
                 };
 
-                // Don't exceed half the display size
-                min(height, px_size.height / 2) / scale
+                // Don't exceed half the display size.
+                let height = min(height, px_size.height / 2);
+                // Don't waste screen space by exceeding best target height.
+                let height = min(height, self.get_max_target_height());
+                height / scale
             }),
             Some((scale, None)) => Some(360 / scale),
             None => None,

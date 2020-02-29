@@ -129,7 +129,7 @@ pub mod c {
         outputs: COutputs,
         wl_output: WlOutput,
         _x: i32, _y: i32,
-        _phys_width: i32, _phys_height: i32,
+        phys_width: i32, phys_height: i32,
         _subpixel: i32,
         _make: *const c_char, _model: *const c_char,
         transform: i32,
@@ -145,8 +145,23 @@ pub mod c {
         let output_state: Option<&mut OutputState>
             = find_output_mut(&mut collection, wl_output)
                 .map(|o| &mut o.pending);
+
         match output_state {
-            Some(state) => { state.transform = Some(transform) },
+            Some(state) => {
+                state.transform = Some(transform);
+                state.phys_size = {
+                    if (phys_width > 0) & (phys_height > 0) {
+                        Some(SizeMM { width: phys_width, height: phys_height })
+                    } else {
+                        log_print!(
+                            logging::Level::Surprise,
+                            "Impossible physical dimensions: {}mm × {}mm",
+                            phys_width, phys_height,
+                        );
+                        None
+                    }
+                }
+            },
             None => log_print!(
                 logging::Level::Warning,
                 "Got geometry on unknown output",
@@ -299,6 +314,12 @@ pub struct Size {
     pub height: u32,
 }
 
+#[derive(Clone)]
+pub struct SizeMM {
+    pub width: i32,
+    pub height: i32,
+}
+
 /// wl_output mode
 #[derive(Clone)]
 struct Mode {
@@ -309,6 +330,7 @@ struct Mode {
 #[derive(Clone)]
 pub struct OutputState {
     current_mode: Option<Mode>,
+    phys_size: Option<SizeMM>,
     transform: Option<c::Transform>,
     pub scale: i32,
 }
@@ -323,6 +345,7 @@ impl OutputState {
     fn uninitialized() -> OutputState {
         OutputState {
             current_mode: None,
+            phys_size: None,
             transform: None,
             scale: 1,
         }
@@ -334,6 +357,35 @@ impl OutputState {
             OutputState {
                 current_mode: Some(Mode { width, height } ),
                 transform: Some(transform),
+                phys_size: _,
+                scale: _,
+            } => Some(
+                match transform {
+                    Transform::Normal
+                    | Transform::Rotated180
+                    | Transform::Flipped
+                    | Transform::FlippedRotated180 => Size {
+                        width: *width as u32,
+                        height: *height as u32,
+                    },
+                    _ => Size {
+                        width: *height as u32,
+                        height: *width as u32,
+                    },
+                }
+            ),
+            _ => None,
+        }
+    }
+    
+    /// Returns transformed dimensions
+    pub fn get_phys_size(&self) -> Option<Size> {
+        use self::c::Transform;
+        match self {
+            OutputState {
+                current_mode: _,
+                transform: Some(transform),
+                phys_size: Some(SizeMM { width, height }),
                 scale: _,
             } => Some(
                 match transform {
