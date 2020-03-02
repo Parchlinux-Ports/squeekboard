@@ -7,20 +7,30 @@
  * Coordinates this based on information collated from all possible sources.
  */
 
+use std::cell::RefCell;
 use std::cmp::min;
+use std::rc::Rc;
 
 use ::logging;
-use ::outputs::OutputState;
+use ::outputs::{ Outputs, OutputState};
 use ::outputs::c::OutputHandle;
 
 mod c {
     use super::*;
+    use ::outputs::c::COutputs;
     use ::util::c::Wrapped;
 
     #[no_mangle]
     pub extern "C"
-    fn squeek_uiman_new() -> Wrapped<Manager> {
-        Wrapped::new(Manager { output: None })
+    fn squeek_uiman_new(outputs: COutputs) -> Wrapped<Manager> {
+        let uiman_raw = Wrapped::new(Manager { output: None });
+        if !outputs.is_null() {
+            let uiman = uiman_raw.clone_ref();
+            let outputs = outputs.clone_ref();
+            let mut outputs = outputs.borrow_mut();
+            register_output_man(uiman, &mut outputs);
+        }
+        uiman_raw
     }
 
     /// Used to size the layer surface containing all the OSK widgets.
@@ -43,7 +53,7 @@ mod c {
     ) {
         let uiman = uiman.clone_ref();
         let mut uiman = uiman.borrow_mut();
-        uiman.output = Some(output);
+        uiman.set_output(output)
     }
 }
 
@@ -123,4 +133,30 @@ impl Manager {
             None => None,
         }
     }
+    
+    fn set_output(&mut self, output: OutputHandle) {
+        self.output = Some(output);
+    }
+
+    fn handle_output_change(&mut self, output: OutputHandle) {
+        match output.get_state() {
+            Some(os) => {
+                println!("{:?}", os.get_pixel_size());
+            }
+            None => {
+                println!("gone");
+            }
+        }
+    }
+}
+
+fn register_output_man(
+    ui_man: Rc<RefCell<Manager>>,
+    output_man: &mut Outputs,
+) {
+    let ui_man = ui_man.clone();
+    output_man.set_update_cb(Box::new(move |output: OutputHandle| {
+        let mut ui_man = ui_man.borrow_mut();
+        ui_man.handle_output_change(output)
+    }))
 }

@@ -1,5 +1,10 @@
+/* Copyright (C) 2019-2020 Purism SPC
+ * SPDX-License-Identifier: GPL-3.0+
+ */
+
 /*! Managing Wayland outputs */
 
+use std::cell::RefCell;
 use std::vec::Vec;
 use ::logging;
 
@@ -103,7 +108,7 @@ pub mod c {
         ) -> i32;
     }
 
-    type COutputs = ::util::c::Wrapped<Outputs>;
+    pub type COutputs = ::util::c::Wrapped<Outputs>;
 
     /// A stable reference to an output.
     #[derive(Clone)]
@@ -202,19 +207,27 @@ pub mod c {
     }
 
     extern fn outputs_handle_done(
-        outputs: COutputs,
+        outputs_raw: COutputs,
         wl_output: WlOutput,
     ) {
-        let outputs = outputs.clone_ref();
-        let mut collection = outputs.borrow_mut();
-        let output = find_output_mut(&mut collection, wl_output);
-        match output {
-            Some(output) => { output.current = output.pending.clone(); }
-            None => log_print!(
-                logging::Level::Warning,
-                "Got done on unknown output",
-            ),
-        };
+        let outputs = outputs_raw.clone_ref();
+        {
+            let mut collection = RefCell::borrow_mut(&outputs);
+            let output = find_output_mut(&mut collection, wl_output);
+            match output {
+                Some(output) => { output.current = output.pending.clone(); }
+                None => log_print!(
+                    logging::Level::Warning,
+                    "Got done on unknown output",
+                ),
+            };
+        }
+        let collection = RefCell::borrow(&outputs);
+        if let Some(ref cb) = &collection.update_cb {
+            let mut cb = RefCell::borrow_mut(cb);
+            let cb = Box::as_mut(&mut cb);
+            cb(OutputHandle { wl_output, outputs: outputs_raw });
+        }
     }
 
     extern fn outputs_handle_scale(
@@ -239,7 +252,10 @@ pub mod c {
     #[no_mangle]
     pub extern "C"
     fn squeek_outputs_new() -> COutputs {
-        COutputs::new(Outputs { outputs: Vec::new() })
+        COutputs::new(Outputs {
+            outputs: Vec::new(),
+            update_cb: None,
+        })
     }
 
     #[no_mangle]
@@ -308,7 +324,7 @@ pub mod c {
 }
 
 /// Generic size
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Size {
     pub width: u32,
     pub height: u32,
@@ -413,6 +429,38 @@ pub struct Output {
     current: OutputState,
 }
 
+/// The manager of all outputs.
+// This is the target of several callbacks,
+// so it should only be used with a stable place in memory, like `Rc<RefCell>`.
+// It should not be instantiated externally or copied,
+// or it will not receive those callbacks and be somewhat of an empty shell.
+// It should be safe to use as long as the fields are not `pub`,
+// and there's no `Clone`, and this module's API only ever gives out
+// references wrapped in `Rc<RefCell>`.
+// For perfectness, it would only ever give out immutable opaque references,
+// but that's not practical at the moment.
+// `mem::swap` could replace the value inside,
+// but as long as the swap is atomic,
+// that should not cause an inconsistent state.
 pub struct Outputs {
     outputs: Vec<Output>,
+    // The RefCell is here to let the function be called
+    // while holding only a read-reference to `Outputs`.
+    // Otherwise anything trying to get useful data from OutputHandle
+    // will fail to acquire reference to Outputs.
+    // TODO: Maybe pass only current state along with Outputs and Output hash.
+    // The only reason a full OutputHandle is here
+    // is to be able to track the right Output.
+    update_cb: Option<RefCell<Box<dyn FnMut(c::OutputHandle)>>>,
+}
+
+impl Outputs {
+    /// The function will get called whenever
+    /// any output changes or is removed or created.
+    /// If output handle doesn't return state, the output just went down.
+    /// It cannot modify anything in Outputs.
+    // FIXME: handle output destruction
+    pub fn set_update_cb(&mut self, callback: Box<dyn FnMut(c::OutputHandle)>) {
+        self.update_cb = Some(RefCell::new(callback));
+    }
 }

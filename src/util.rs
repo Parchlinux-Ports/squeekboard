@@ -94,6 +94,7 @@ pub mod c {
         }
         /// Extracts the reference to the data.
         /// It may cause problems if attempted in more than one place
+        // FIXME: check for null
         pub unsafe fn unwrap(self) -> Rc<RefCell<T>> {
             Rc::from_raw(self.0)
         }
@@ -106,6 +107,10 @@ pub mod c {
             let rc = used_rc.clone();
             Rc::into_raw(used_rc); // prevent dropping the original reference
             rc
+        }
+
+        pub fn is_null(&self) -> bool {
+            self.0.is_null()
         }
     }
     

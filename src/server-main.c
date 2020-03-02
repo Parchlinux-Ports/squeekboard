@@ -203,7 +203,7 @@ main (int argc, char **argv)
         g_warning("Wayland input method interface not available");
     }
 
-    instance.ui_manager = squeek_uiman_new();
+    instance.ui_manager = squeek_uiman_new(instance.wayland.outputs);
 
     instance.settings_context = eekboard_context_service_new(&instance.layout_choice);
 
