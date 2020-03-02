@@ -22,7 +22,7 @@ pub mod c {
     // Defined in C
 
     #[repr(transparent)]
-    #[derive(Clone, PartialEq, Copy)]
+    #[derive(Clone, PartialEq, Copy, Hash)]
     pub struct WlOutput(*const c_void);
 
     #[repr(C)]
@@ -68,7 +68,7 @@ pub mod c {
     }
 
     /// Map to `wl_output.transform` values
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq)]
     pub enum Transform {
         Normal = 0,
         Rotated90 = 1,
@@ -125,6 +125,10 @@ pub mod c {
             let outputs = self.outputs.clone_ref();
             let outputs = outputs.borrow();
             find_output(&outputs, self.wl_output.clone()).map(|o| o.current.clone())
+        }
+
+        pub fn get_id(&self) -> OutputId {
+            OutputId { wl_output: self.wl_output }
         }
     }
 
@@ -330,20 +334,20 @@ pub struct Size {
     pub height: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct SizeMM {
     pub width: i32,
     pub height: i32,
 }
 
 /// wl_output mode
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct Mode {
     width: i32,
     height: i32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct OutputState {
     current_mode: Option<Mode>,
     phys_size: Option<SizeMM>,
@@ -421,6 +425,14 @@ impl OutputState {
             _ => None,
         }
     }
+}
+
+/// A comparable ID of an output
+#[derive(Clone, PartialEq, Hash)]
+pub struct OutputId {
+    // WlOutput is a unique pointer, so it will not repeat
+    // even if there are multiple output managers.
+    wl_output: c::WlOutput,
 }
 
 pub struct Output {

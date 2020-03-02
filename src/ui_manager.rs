@@ -12,8 +12,11 @@ use std::cmp::min;
 use std::rc::Rc;
 
 use ::logging;
-use ::outputs::{ Outputs, OutputState};
+use ::outputs::{ OutputId, Outputs, OutputState};
 use ::outputs::c::OutputHandle;
+
+// Traits
+use ::logging::Warn;
 
 mod c {
     use super::*;
@@ -23,7 +26,7 @@ mod c {
     #[no_mangle]
     pub extern "C"
     fn squeek_uiman_new(outputs: COutputs) -> Wrapped<Manager> {
-        let uiman_raw = Wrapped::new(Manager { output: None });
+        let uiman_raw = Wrapped::new(Manager::new());
         if !outputs.is_null() {
             let uiman = uiman_raw.clone_ref();
             let outputs = outputs.clone_ref();
@@ -42,7 +45,7 @@ mod c {
         let uiman = uiman.clone_ref();
         let uiman = uiman.borrow();
         // TODO: what to do when there's no output?
-        uiman.get_perceptual_height().unwrap_or(0)
+        uiman.state.get_perceptual_height().unwrap_or(0)
     }
 
     #[no_mangle]
@@ -58,18 +61,14 @@ mod c {
 }
 
 /// Stores current state of all things influencing what the UI should look like.
-pub struct Manager {
-    /// Shared output handle, current state updated whenever it's needed.
-    // TODO: Stop assuming that the output never changes.
-    // (There's no way for the output manager to update the ui manager.)
-    // FIXME: Turn into an OutputState and apply relevant connections elsewhere.
-    // Otherwise testability and predictablity is low.
-    output: Option<OutputHandle>,
+#[derive(Clone, PartialEq)]
+pub struct ManagerState {
+    current_output: Option<(OutputId, OutputState)>,
     //// Pixel size of the surface. Needs explicit updating.
     //surface_size: Option<Size>,
 }
 
-impl Manager {
+impl ManagerState {
     /// The largest ideal heigth for the keyboard as a whole
     /// judged by the ease of hitting targets within.
     /// Ideally related to finger size, the crammedness of the layout,
@@ -106,12 +105,11 @@ impl Manager {
     }
 
     fn get_perceptual_height(&self) -> Option<u32> {
-        let output_info = (&self.output).as_ref()
-            .and_then(|o| o.get_state())
-            .map(|os| (
+        let output_info = (&self.current_output).as_ref()
+            .map(|(_id, os)| (
                 os.scale as u32,
                 os.get_pixel_size(),
-                Manager::get_max_target_height(&os),
+                ManagerState::get_max_target_height(&os),
             ));
         match output_info {
             Some((scale, Some(px_size), target_height)) => Some({
@@ -133,20 +131,60 @@ impl Manager {
             None => None,
         }
     }
-    
+}
+
+pub struct Manager {
+    state: ManagerState,
+}
+
+impl Manager {
+    fn new() -> Manager {
+        Manager {
+            state: ManagerState { current_output: None },
+        }
+    }
     fn set_output(&mut self, output: OutputHandle) {
-        self.output = Some(output);
+        let output_state = output.get_state()
+            .or_warn(
+                &mut logging::Print,
+                logging::Problem::Bug,
+                // This is really bad. It only happens when the layer surface
+                // is placed, and it happens once.
+                // The layer surface is on an output that can't be tracked.
+                "Tried to set output that's not known to exist. Ignoring.",
+            );
+        self.state.current_output = output_state.map(
+            |state| (output.get_id(), state)
+        );
+        // TODO: At the time of writing, this function is only used once,
+        // before the layer surface is initialized.
+        // Therefore it doesn't update anything. Maybe it should in the future,
+        // if it sees more use.
     }
 
     fn handle_output_change(&mut self, output: OutputHandle) {
-        match output.get_state() {
-            Some(os) => {
-                println!("{:?}", os.get_pixel_size());
+        let (id, output_state) = match &self.state.current_output {
+            Some((id, state)) => {
+                if *id != output.get_id() { return } // Not the current output.
+                else { (id, state) }
+            },
+            None => return, // Keyboard isn't on any output.
+        };
+        if let Some(new_output_state) = output.get_state() {
+            if new_output_state != *output_state {
+                let new_state = ManagerState {
+                    current_output: Some((id.clone(), new_output_state)),
+                    ..self.state.clone()
+                };
+                let new_height = new_state.get_perceptual_height();
+                if new_height != self.state.get_perceptual_height() {
+                    println!("New height: {:?}", new_height);
+                    //update_layer_surface_height(new_height);
+                    // TODO: here hard-size the keyboard and suggestion box too.
+                }
+                self.state = new_state;
             }
-            None => {
-                println!("gone");
-            }
-        }
+        };
     }
 }
 
