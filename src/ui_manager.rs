@@ -195,12 +195,12 @@ impl Manager {
         let (id, output_state) = match &self.state.current_output {
             Some((id, state)) => {
                 if *id != output.get_id() { return } // Not the current output.
-                else { (id, state) }
+                else { (id.clone(), state.clone()) }
             },
             None => return, // Keyboard isn't on any output.
         };
         if let Some(new_output_state) = output.get_state() {
-            if new_output_state != *output_state {
+            if new_output_state != output_state {
                 let new_state = ManagerState {
                     current_output: Some((id.clone(), new_output_state)),
                     ..self.state.clone()
