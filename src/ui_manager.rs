@@ -20,8 +20,23 @@ use ::logging::Warn;
 
 mod c {
     use super::*;
+    use std::os::raw::c_void;
     use ::outputs::c::COutputs;
     use ::util::c::Wrapped;
+
+    #[derive(Clone, Copy)]
+    #[repr(C)]
+    pub struct PhoshLayerSurface(*const c_void);
+
+    extern "C" {
+        // Rustc wrongly assumes
+        // that COutputs allows C direct access to the underlying RefCell.
+        #[allow(improper_ctypes)]
+        pub fn squeek_manager_set_surface_height(
+            surface: PhoshLayerSurface,
+            height: u32,
+        );
+    }
 
     #[no_mangle]
     pub extern "C"
@@ -57,6 +72,18 @@ mod c {
         let uiman = uiman.clone_ref();
         let mut uiman = uiman.borrow_mut();
         uiman.set_output(output)
+    }
+
+    #[no_mangle]
+    pub extern "C"
+    fn squeek_uiman_set_surface(
+        uiman: Wrapped<Manager>,
+        surface: PhoshLayerSurface,
+    ) {
+        let uiman = uiman.clone_ref();
+        let mut uiman = uiman.borrow_mut();
+        // Surface is not state, so doesn't need to propagate updates.
+        uiman.surface = Some(surface);
     }
 }
 
@@ -135,12 +162,14 @@ impl ManagerState {
 
 pub struct Manager {
     state: ManagerState,
+    surface: Option<c::PhoshLayerSurface>,
 }
 
 impl Manager {
     fn new() -> Manager {
         Manager {
-            state: ManagerState { current_output: None },
+            state: ManagerState { current_output: None, },
+            surface: None,
         }
     }
     fn set_output(&mut self, output: OutputHandle) {
@@ -176,11 +205,23 @@ impl Manager {
                     current_output: Some((id.clone(), new_output_state)),
                     ..self.state.clone()
                 };
-                let new_height = new_state.get_perceptual_height();
-                if new_height != self.state.get_perceptual_height() {
-                    println!("New height: {:?}", new_height);
-                    //update_layer_surface_height(new_height);
-                    // TODO: here hard-size the keyboard and suggestion box too.
+                if let Some(surface) = &self.surface {
+                    let new_height = new_state.get_perceptual_height();
+                    if new_height != self.state.get_perceptual_height() {
+                        // TODO: here hard-size the keyboard and suggestion box too.
+                        match new_height {
+                            Some(new_height) => unsafe {
+                                c::squeek_manager_set_surface_height(
+                                    *surface,
+                                    new_height,
+                                )
+                            }
+                            None => log_print!(
+                                logging::Level::Bug,
+                                "Can't calculate new size",
+                            ),
+                        }
+                    }
                 }
                 self.state = new_state;
             }

@@ -15,6 +15,7 @@ sources = [
   'dbus.c',
   'imservice.c',
   'server-context-service.c',
+  'ui_manager.c',
   'wayland.c',
   '../eek/eek.c',
   '../eek/eek-element.c',

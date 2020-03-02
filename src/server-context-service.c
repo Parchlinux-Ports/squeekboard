@@ -139,6 +139,7 @@ make_window (ServerContextService *context)
         NULL
     );
 
+    squeek_uiman_set_surface(context->manager, context->window);
     g_object_connect (context->window,
                       "signal::destroy", G_CALLBACK(on_destroy), context,
                       "signal::map", G_CALLBACK(on_notify_map), context,
