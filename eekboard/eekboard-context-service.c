@@ -80,13 +80,6 @@ eekboard_context_service_get_property (GObject    *object,
 }
 
 static void
-eekboard_context_service_dispose (GObject *object)
-{
-    G_OBJECT_CLASS (layout_holder_parent_class)->
-        dispose (object);
-}
-
-static void
 settings_get_layout(GSettings *settings, char **type, char **layout)
 {
     if (!settings) {
@@ -155,21 +148,13 @@ layout_holder_init (LayoutHolder *self) {
 }
 
 static void
-eekboard_context_service_constructed (GObject *object)
-{
-    (void)object;
-}
-
-static void
 layout_holder_class_init (LayoutHolderClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
     GParamSpec *pspec;
 
-    gobject_class->constructed = eekboard_context_service_constructed;
     gobject_class->set_property = eekboard_context_service_set_property;
     gobject_class->get_property = eekboard_context_service_get_property;
-    gobject_class->dispose = eekboard_context_service_dispose;
 
     /**
      * EekboardContextService:keyboard:
