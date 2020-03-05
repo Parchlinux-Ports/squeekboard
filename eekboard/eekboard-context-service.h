@@ -51,9 +51,6 @@ typedef struct _EekboardContextServicePrivate EekboardContextServicePrivate;
  *
  * TODO: Restrict to managing keyboard layouts, and maybe button repeats,
  * and the virtual keyboard protocol.
- *
- * The #EekboardContextService structure contains only private data
- * and should only be accessed using the provided API.
  */
 struct _EekboardContextService {
     GObject parent;
@@ -61,19 +58,9 @@ struct _EekboardContextService {
     struct squeek_layout_state *layout; // Unowned
 };
 
-/**
- * EekboardContextServiceClass:
- * @create_keyboard: virtual function for create a keyboard from string
- * @enabled: class handler for #EekboardContextService::enabled signal
- * @disabled: class handler for #EekboardContextService::disabled signal
- */
 struct _EekboardContextServiceClass {
     /*< private >*/
     GObjectClass parent_class;
-
-    /*< public >*/
-    /* signals */
-    void         (*destroyed)          (EekboardContextService *self);
 
     /*< private >*/
     /* padding */
@@ -94,8 +81,6 @@ void eek_gsettings_tracker_init(struct gsettings_tracker* tracker, EekboardConte
 
 EekboardContextService *eekboard_context_service_new(struct squeek_layout_state *state);
 void eekboard_context_service_set_submission(EekboardContextService *context, struct submission *submission);
-void eekboard_context_service_set_ui(EekboardContextService *context, ServerContextService *ui);
-void          eekboard_context_service_destroy (EekboardContextService *context);
 LevelKeyboard *eekboard_context_service_get_keyboard(EekboardContextService *context);
 
 void eekboard_context_service_set_keymap(EekboardContextService *context,

@@ -35,13 +35,6 @@ enum {
     PROP_LAST
 };
 
-enum {
-    DESTROYED,
-    LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = { 0, };
-
 #define EEKBOARD_CONTEXT_SERVICE_GET_PRIVATE(obj)                       \
     (G_TYPE_INSTANCE_GET_PRIVATE ((obj), EEKBOARD_TYPE_CONTEXT_SERVICE, EekboardContextServicePrivate))
 
@@ -177,22 +170,6 @@ eekboard_context_service_class_init (EekboardContextServiceClass *klass)
     gobject_class->set_property = eekboard_context_service_set_property;
     gobject_class->get_property = eekboard_context_service_get_property;
     gobject_class->dispose = eekboard_context_service_dispose;
-    /**
-     * EekboardContextService::destroyed:
-     * @context: an #EekboardContextService
-     *
-     * Emitted when @context is destroyed.
-     */
-    signals[DESTROYED] =
-        g_signal_new (I_("destroyed"),
-                      G_TYPE_FROM_CLASS(gobject_class),
-                      G_SIGNAL_RUN_LAST,
-                      G_STRUCT_OFFSET(EekboardContextServiceClass, destroyed),
-                      NULL,
-                      NULL,
-                      g_cclosure_marshal_VOID__VOID,
-                      G_TYPE_NONE,
-                      0);
 
     /**
      * EekboardContextService:keyboard:
@@ -208,17 +185,10 @@ eekboard_context_service_class_init (EekboardContextServiceClass *klass)
                                      pspec);
 }
 
-/**
- * eekboard_context_service_destroy:
- * @context: an #EekboardContextService
- *
- * Destroy @context.
- */
 void
 eekboard_context_service_destroy (EekboardContextService *context)
 {
-    g_return_if_fail (EEKBOARD_IS_CONTEXT_SERVICE(context));
-    g_signal_emit (context, signals[DESTROYED], 0);
+    (void)context;
 }
 
 /**
