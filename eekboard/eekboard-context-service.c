@@ -48,9 +48,6 @@ static guint signals[LAST_SIGNAL] = { 0, };
 struct _EekboardContextServicePrivate {
     LevelKeyboard *keyboard; // currently used keyboard
 
-    // Maybe TODO: it's used only for fetching layout type.
-    // Maybe let UI push the type to this structure?
-    ServerContextService *ui; // unowned reference
     /// Needed for keymap changes after keyboard updates
     struct submission *submission; // unowned
 };
@@ -274,10 +271,6 @@ void eekboard_context_service_set_submission(EekboardContextService *context, st
     if (context->priv->submission) {
         submission_set_keyboard(context->priv->submission, context->priv->keyboard);
     }
-}
-
-void eekboard_context_service_set_ui(EekboardContextService *context, ServerContextService *ui) {
-    context->priv->ui = ui;
 }
 
 static void settings_update_layout(struct gsettings_tracker *self) {
