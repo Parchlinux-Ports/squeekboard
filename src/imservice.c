@@ -26,7 +26,7 @@ static const struct zwp_input_method_v2_listener input_method_listener = {
 struct submission* get_submission(struct zwp_input_method_manager_v2 *immanager,
                                   struct zwp_virtual_keyboard_manager_v1 *vkmanager,
                                   struct wl_seat *seat,
-                                  EekboardContextService *state) {
+                                  LayoutHolder *state) {
     struct zwp_input_method_v2 *im = NULL;
     if (immanager) {
         im = zwp_input_method_manager_v2_get_input_method(immanager, seat);

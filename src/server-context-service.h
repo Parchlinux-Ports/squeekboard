@@ -37,7 +37,7 @@ typedef struct _ServerContextService ServerContextService;
 GType         server_context_service_get_type
                                               (void) G_GNUC_CONST;
 
-ServerContextService *server_context_service_new(EekboardContextService *state, struct submission *submission, struct squeek_layout_state *layout, struct ui_manager *uiman);
+ServerContextService *server_context_service_new(LayoutHolder *state, struct submission *submission, struct squeek_layout_state *layout, struct ui_manager *uiman);
 enum squeek_arrangement_kind server_context_service_get_layout_type(ServerContextService *);
 void server_context_service_show_keyboard (ServerContextService *context);
 void server_context_service_hide_keyboard (ServerContextService *context);

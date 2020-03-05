@@ -48,7 +48,7 @@ struct _EekGtkKeyboardClass
 };
 
 GType      eek_gtk_keyboard_get_type  (void) G_GNUC_CONST;
-GtkWidget *eek_gtk_keyboard_new       (EekboardContextService *eekservice, struct submission *submission, struct squeek_layout_state *layout);
+GtkWidget *eek_gtk_keyboard_new       (LayoutHolder *eekservice, struct submission *submission, struct squeek_layout_state *layout);
 
 G_END_DECLS
 #endif  /* EEK_GTK_KEYBOARD_H */

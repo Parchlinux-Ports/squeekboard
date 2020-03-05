@@ -30,35 +30,30 @@
 
 G_BEGIN_DECLS
 
-#define EEKBOARD_CONTEXT_SERVICE_PATH "/org/fedorahosted/Eekboard/Context_%d"
-#define EEKBOARD_CONTEXT_SERVICE_INTERFACE "org.fedorahosted.Eekboard.Context"
-
-#define EEKBOARD_TYPE_CONTEXT_SERVICE (eekboard_context_service_get_type())
-#define EEKBOARD_CONTEXT_SERVICE(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), EEKBOARD_TYPE_CONTEXT_SERVICE, EekboardContextService))
+#define EEKBOARD_TYPE_LAYOUT_HOLDER (layout_holder_get_type())
+#define LAYOUT_HOLDER(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), EEKBOARD_TYPE_LAYOUT_HOLDER, LayoutHolder))
 #define EEKBOARD_CONTEXT_SERVICE_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), EEKBOARD_TYPE_CONTEXT_SERVICE, EekboardContextServiceClass))
 #define EEKBOARD_IS_CONTEXT_SERVICE(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), EEKBOARD_TYPE_CONTEXT_SERVICE))
 #define EEKBOARD_IS_CONTEXT_SERVICE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), EEKBOARD_TYPE_CONTEXT_SERVICE))
 #define EEKBOARD_CONTEXT_SERVICE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), EEKBOARD_TYPE_CONTEXT_SERVICE, EekboardContextServiceClass))
 
 
-typedef struct _EekboardContextServiceClass EekboardContextServiceClass;
-typedef struct _EekboardContextServicePrivate EekboardContextServicePrivate;
+typedef struct _LayoutHolderClass LayoutHolderClass;
+typedef struct _LayoutHolderPrivate LayoutHolderPrivate;
 
 /**
- * EekboardContextService:
- *
  * Handles layout state, and virtual-keyboard.
  *
  * TODO: Restrict to managing keyboard layouts, and maybe button repeats,
  * and the virtual keyboard protocol.
  */
-struct _EekboardContextService {
+struct _LayoutHolder {
     GObject parent;
-    EekboardContextServicePrivate *priv;
+    LayoutHolderPrivate *priv;
     struct squeek_layout_state *layout; // Unowned
 };
 
-struct _EekboardContextServiceClass {
+struct _LayoutHolderClass {
     /*< private >*/
     GObjectClass parent_class;
 
@@ -67,29 +62,28 @@ struct _EekboardContextServiceClass {
     gpointer pdummy[24];
 };
 
-GType         eekboard_context_service_get_type
-                                              (void) G_GNUC_CONST;
+GType         layout_holder_get_type(void) G_GNUC_CONST;
 
 /// Handles gsettings os-level keyboard layout switches.
 struct gsettings_tracker {
     GSettings *gsettings; // Owned reference
-    EekboardContextService *context; // Unowned
+    LayoutHolder *context; // Unowned
     struct squeek_layout_state *layout; // Unowned
 };
 
-void eek_gsettings_tracker_init(struct gsettings_tracker* tracker, EekboardContextService *context, struct squeek_layout_state *layout);
+void eek_gsettings_tracker_init(struct gsettings_tracker* tracker, LayoutHolder *context, struct squeek_layout_state *layout);
 
-EekboardContextService *eekboard_context_service_new(struct squeek_layout_state *state);
-void eekboard_context_service_set_submission(EekboardContextService *context, struct submission *submission);
-LevelKeyboard *eekboard_context_service_get_keyboard(EekboardContextService *context);
+LayoutHolder *eekboard_context_service_new(struct squeek_layout_state *state);
+void eekboard_context_service_set_submission(LayoutHolder *context, struct submission *submission);
+LevelKeyboard *eekboard_context_service_get_keyboard(LayoutHolder *context);
 
-void eekboard_context_service_set_keymap(EekboardContextService *context,
+void eekboard_context_service_set_keymap(LayoutHolder *context,
                                          const LevelKeyboard *keyboard);
 
-void eekboard_context_service_set_hint_purpose(EekboardContextService *context,
+void eekboard_context_service_set_hint_purpose(LayoutHolder *context,
                                                uint32_t hint,
                                                uint32_t purpose);
 void
-eekboard_context_service_use_layout(EekboardContextService *context, struct squeek_layout_state *layout);
+eekboard_context_service_use_layout(LayoutHolder *context, struct squeek_layout_state *layout);
 G_END_DECLS
 #endif  /* EEKBOARD_CONTEXT_SERVICE_H */

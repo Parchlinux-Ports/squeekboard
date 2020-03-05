@@ -39,7 +39,7 @@ typedef struct _ServerContextServiceClass ServerContextServiceClass;
 struct _ServerContextService {
     GObject parent;
 
-    EekboardContextService *state; // unowned
+    LayoutHolder *state; // unowned
     /// Needed for instantiating the widget
     struct submission *submission; // unowned
     struct squeek_layout_state *layout;
@@ -312,7 +312,7 @@ server_context_service_init (ServerContextService *state) {
 }
 
 ServerContextService *
-server_context_service_new (EekboardContextService *state, struct submission *submission, struct squeek_layout_state *layout, struct ui_manager *uiman)
+server_context_service_new (LayoutHolder *state, struct submission *submission, struct squeek_layout_state *layout, struct ui_manager *uiman)
 {
     ServerContextService *ui = g_object_new (SERVER_TYPE_CONTEXT_SERVICE, NULL);
     ui->submission = submission;

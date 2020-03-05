@@ -45,7 +45,7 @@
 typedef struct _EekGtkKeyboardPrivate
 {
     EekRenderer *renderer; // owned, nullable
-    EekboardContextService *eekboard_context; // unowned reference
+    LayoutHolder *eekboard_context; // unowned reference
     struct submission *submission; // unowned reference
 
     struct squeek_layout_state *layout; // unowned
@@ -343,7 +343,7 @@ on_notify_keyboard (GObject              *object,
                     EekGtkKeyboard *self) {
     (void)spec;
     EekGtkKeyboardPrivate *priv = (EekGtkKeyboardPrivate*)eek_gtk_keyboard_get_instance_private (self);
-    priv->keyboard = eekboard_context_service_get_keyboard(EEKBOARD_CONTEXT_SERVICE(object));
+    priv->keyboard = eekboard_context_service_get_keyboard(LAYOUT_HOLDER(object));
     if (priv->renderer) {
         eek_renderer_free(priv->renderer);
     }
@@ -356,7 +356,7 @@ on_notify_keyboard (GObject              *object,
  * Returns: a #GtkWidget
  */
 GtkWidget *
-eek_gtk_keyboard_new (EekboardContextService *eekservice,
+eek_gtk_keyboard_new (LayoutHolder *eekservice,
                       struct submission *submission,
                       struct squeek_layout_state *layout)
 {

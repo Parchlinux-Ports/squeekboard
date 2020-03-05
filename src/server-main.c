@@ -42,7 +42,7 @@
 struct squeekboard {
     struct squeek_wayland wayland; // Just hooks.
     DBusHandler *dbus_handler; // Controls visibility of the OSK.
-    EekboardContextService *layout_holder; // Currently used layout & keyboard.
+    LayoutHolder *layout_holder; // Currently used layout & keyboard.
     ServerContextService *ui_context; // mess, includes the entire UI
     struct submission *submission; // Wayland text input handling.
     struct squeek_layout_state layout_choice; // Currently wanted layout.
