@@ -47,7 +47,6 @@ static guint signals[LAST_SIGNAL] = { 0, };
 
 struct _EekboardContextServicePrivate {
     LevelKeyboard *keyboard; // currently used keyboard
-    GSettings *settings; // Owned reference
 
     // Maybe TODO: it's used only for fetching layout type.
     // Maybe let UI push the type to this structure?
@@ -160,34 +159,9 @@ eekboard_context_service_use_layout(EekboardContextService *context, struct sque
     }
 }
 
-static void eekboard_context_service_update_settings_layout(EekboardContextService *context) {
-    g_autofree gchar *keyboard_layout = NULL;
-    g_autofree gchar *keyboard_type = NULL;
-    settings_get_layout(context->priv->settings,
-                        &keyboard_type, &keyboard_layout);
-
-    if (g_strcmp0(context->layout->layout_name, keyboard_layout) != 0 || context->layout->overlay_name) {
-        g_free(context->layout->overlay_name);
-        context->layout->overlay_name = NULL;
-        if (keyboard_layout) {
-            g_free(context->layout->layout_name);
-            context->layout->layout_name = g_strdup(keyboard_layout);
-        }
-        // This must actually update the UI.
-        eekboard_context_service_use_layout(context, context->layout);
-    }
-}
-
-static gboolean
-settings_handle_layout_changed(GSettings *s,
-                               gpointer keys, gint n_keys,
-                               gpointer user_data) {
-    (void)s;
-    (void)keys;
-    (void)n_keys;
-    EekboardContextService *context = user_data;
-    eekboard_context_service_update_settings_layout(context);
-    return TRUE;
+static void
+eekboard_context_service_init (EekboardContextService *self) {
+    self->priv = EEKBOARD_CONTEXT_SERVICE_GET_PRIVATE(self);
 }
 
 static void
@@ -235,36 +209,6 @@ eekboard_context_service_class_init (EekboardContextServiceClass *klass)
     g_object_class_install_property (gobject_class,
                                      PROP_KEYBOARD,
                                      pspec);
-}
-
-static void
-eekboard_context_service_init (EekboardContextService *self)
-{
-    self->priv = EEKBOARD_CONTEXT_SERVICE_GET_PRIVATE(self);
-    const char *schema_name = "org.gnome.desktop.input-sources";
-    GSettingsSchemaSource *ssrc = g_settings_schema_source_get_default();
-    if (ssrc) {
-        GSettingsSchema *schema = g_settings_schema_source_lookup(ssrc,
-                                                                  schema_name,
-                                                                  TRUE);
-        if (schema) {
-            // Not referencing the found schema directly,
-            // because it's not clear how...
-            self->priv->settings = g_settings_new (schema_name);
-            gulong conn_id = g_signal_connect(self->priv->settings, "change-event",
-                                              G_CALLBACK(settings_handle_layout_changed),
-                                              self);
-            if (conn_id == 0) {
-                g_warning ("Could not connect to gsettings updates, "
-                           "automatic layout changing unavailable");
-            }
-        } else {
-            g_warning("Gsettings schema %s is not installed on the system. "
-                      "Layout switching unavailable", schema_name);
-        }
-    } else {
-        g_warning("No gsettings schemas installed. Layout switching unavailable.");
-    }
 }
 
 /**
@@ -321,7 +265,6 @@ EekboardContextService *eekboard_context_service_new(struct squeek_layout_state 
 {
     EekboardContextService *context = g_object_new (EEKBOARD_TYPE_CONTEXT_SERVICE, NULL);
     context->layout = state;
-    eekboard_context_service_update_settings_layout(context);
     eekboard_context_service_use_layout(context, context->layout);
     return context;
 }
@@ -335,4 +278,68 @@ void eekboard_context_service_set_submission(EekboardContextService *context, st
 
 void eekboard_context_service_set_ui(EekboardContextService *context, ServerContextService *ui) {
     context->priv->ui = ui;
+}
+
+static void settings_update_layout(struct gsettings_tracker *self) {
+    // The layout in the param must be the same layout as held by context.
+    g_autofree gchar *keyboard_layout = NULL;
+    g_autofree gchar *keyboard_type = NULL;
+    settings_get_layout(self->gsettings,
+                        &keyboard_type, &keyboard_layout);
+
+    if (g_strcmp0(self->layout->layout_name, keyboard_layout) != 0 || self->layout->overlay_name) {
+        g_free(self->layout->overlay_name);
+        self->layout->overlay_name = NULL;
+        if (keyboard_layout) {
+            g_free(self->layout->layout_name);
+            self->layout->layout_name = g_strdup(keyboard_layout);
+        }
+        // This must actually update the UI.
+        eekboard_context_service_use_layout(self->context, self->layout);
+    }
+}
+
+static gboolean
+handle_layout_changed(GSettings *s,
+                               gpointer keys, gint n_keys,
+                               gpointer user_data) {
+    (void)s;
+    (void)keys;
+    (void)n_keys;
+    struct gsettings_tracker *self = user_data;
+    settings_update_layout(self);
+    return TRUE;
+}
+
+void eek_gsettings_tracker_init(struct gsettings_tracker *tracker, EekboardContextService *context, struct squeek_layout_state *layout)
+{
+    tracker->layout = layout;
+    tracker->context = context;
+
+    const char *schema_name = "org.gnome.desktop.input-sources";
+    GSettingsSchemaSource *ssrc = g_settings_schema_source_get_default();
+    if (ssrc) {
+        GSettingsSchema *schema = g_settings_schema_source_lookup(ssrc,
+                                                                  schema_name,
+                                                                  TRUE);
+        if (schema) {
+            // Not referencing the found schema directly,
+            // because it's not clear how...
+            tracker->gsettings = g_settings_new (schema_name);
+            gulong conn_id = g_signal_connect(tracker->gsettings, "change-event",
+                                              G_CALLBACK(handle_layout_changed),
+                                              tracker);
+            if (conn_id == 0) {
+                g_warning ("Could not connect to gsettings updates, "
+                           "automatic layout changing unavailable");
+            }
+        } else {
+            g_warning("Gsettings schema %s is not installed on the system. "
+                      "Layout switching unavailable", schema_name);
+        }
+    } else {
+        g_warning("No gsettings schemas installed. Layout switching unavailable.");
+    }
+
+    settings_update_layout(tracker);
 }

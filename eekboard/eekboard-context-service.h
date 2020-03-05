@@ -47,7 +47,7 @@ typedef struct _EekboardContextServicePrivate EekboardContextServicePrivate;
 /**
  * EekboardContextService:
  *
- * Handles layout state, gsettings, and virtual-keyboard.
+ * Handles layout state, and virtual-keyboard.
  *
  * TODO: Restrict to managing keyboard layouts, and maybe button repeats,
  * and the virtual keyboard protocol.
@@ -82,6 +82,16 @@ struct _EekboardContextServiceClass {
 
 GType         eekboard_context_service_get_type
                                               (void) G_GNUC_CONST;
+
+/// Handles gsettings os-level keyboard layout switches.
+struct gsettings_tracker {
+    GSettings *gsettings; // Owned reference
+    EekboardContextService *context; // Unowned
+    struct squeek_layout_state *layout; // Unowned
+};
+
+void eek_gsettings_tracker_init(struct gsettings_tracker* tracker, EekboardContextService *context, struct squeek_layout_state *layout);
+
 EekboardContextService *eekboard_context_service_new(struct squeek_layout_state *state);
 void eekboard_context_service_set_submission(EekboardContextService *context, struct submission *submission);
 void eekboard_context_service_set_ui(EekboardContextService *context, ServerContextService *ui);

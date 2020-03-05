@@ -42,11 +42,12 @@
 struct squeekboard {
     struct squeek_wayland wayland; // Just hooks.
     DBusHandler *dbus_handler; // Controls visibility of the OSK.
-    EekboardContextService *settings_context; // Gsettings hooks.
+    EekboardContextService *settings_context; // Currently used layout & keyboard.
     ServerContextService *ui_context; // mess, includes the entire UI
     struct submission *submission; // Wayland text input handling.
     struct squeek_layout_state layout_choice; // Currently wanted layout.
     struct ui_manager *ui_manager; // UI shape tracker/chooser. TODO: merge with layuot choice
+    struct gsettings_tracker gsettings_tracker; // Gsettings handling.
 };
 
 
@@ -206,7 +207,7 @@ main (int argc, char **argv)
     instance.ui_manager = squeek_uiman_new(instance.wayland.outputs);
 
     instance.settings_context = eekboard_context_service_new(&instance.layout_choice);
-
+    eek_gsettings_tracker_init(&instance.gsettings_tracker, instance.settings_context, &instance.layout_choice);
     // set up dbus
 
     // TODO: make dbus errors non-always-fatal
