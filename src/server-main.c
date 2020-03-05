@@ -42,7 +42,7 @@
 struct squeekboard {
     struct squeek_wayland wayland; // Just hooks.
     DBusHandler *dbus_handler; // Controls visibility of the OSK.
-    EekboardContextService *settings_context; // Currently used layout & keyboard.
+    EekboardContextService *layout_holder; // Currently used layout & keyboard.
     ServerContextService *ui_context; // mess, includes the entire UI
     struct submission *submission; // Wayland text input handling.
     struct squeek_layout_state layout_choice; // Currently wanted layout.
@@ -206,8 +206,8 @@ main (int argc, char **argv)
 
     instance.ui_manager = squeek_uiman_new(instance.wayland.outputs);
 
-    instance.settings_context = eekboard_context_service_new(&instance.layout_choice);
-    eek_gsettings_tracker_init(&instance.gsettings_tracker, instance.settings_context, &instance.layout_choice);
+    instance.layout_holder = eekboard_context_service_new(&instance.layout_choice);
+    eek_gsettings_tracker_init(&instance.gsettings_tracker, instance.layout_holder, &instance.layout_choice);
     // set up dbus
 
     // TODO: make dbus errors non-always-fatal
@@ -280,12 +280,12 @@ main (int argc, char **argv)
     instance.submission = get_submission(instance.wayland.input_method_manager,
                                          instance.wayland.virtual_keyboard_manager,
                                          instance.wayland.seat,
-                                         instance.settings_context);
+                                         instance.layout_holder);
 
-    eekboard_context_service_set_submission(instance.settings_context, instance.submission);
+    eekboard_context_service_set_submission(instance.layout_holder, instance.submission);
 
     ServerContextService *ui_context = server_context_service_new(
-                instance.settings_context,
+                instance.layout_holder,
                 instance.submission,
                 &instance.layout_choice,
                 instance.ui_manager);
