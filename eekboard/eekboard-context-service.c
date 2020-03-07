@@ -62,7 +62,7 @@ eekboard_context_service_set_property (GObject      *object,
 }
 
 static void
-eekboard_context_service_get_property (GObject    *object,
+layout_holder_get_property (GObject    *object,
                                        guint       prop_id,
                                        GValue     *value,
                                        GParamSpec *pspec)
@@ -98,7 +98,7 @@ settings_get_layout(GSettings *settings, char **type, char **layout)
 }
 
 void
-eekboard_context_service_use_layout(LayoutHolder *context, struct squeek_layout_state *state) {
+eek_layout_holder_use_layout(LayoutHolder *context, struct squeek_layout_state *state) {
     gchar *layout_name = state->overlay_name;
 
     if (layout_name == NULL) {
@@ -154,12 +154,10 @@ layout_holder_class_init (LayoutHolderClass *klass)
     GParamSpec *pspec;
 
     gobject_class->set_property = eekboard_context_service_set_property;
-    gobject_class->get_property = eekboard_context_service_get_property;
+    gobject_class->get_property = layout_holder_get_property;
 
     /**
-     * EekboardContextService:keyboard:
-     *
-     * An #EekKeyboard currently active in this context.
+     * An #LevelKeyboard currently active in this context.
      */
     pspec = g_param_spec_pointer("keyboard",
                                  "Keyboard",
@@ -170,21 +168,12 @@ layout_holder_class_init (LayoutHolderClass *klass)
                                      pspec);
 }
 
-void
-eekboard_context_service_destroy (LayoutHolder *context)
-{
-    (void)context;
-}
-
 /**
- * eekboard_context_service_get_keyboard:
- * @context: an #EekboardContextService
- *
  * Get keyboard currently active in @context.
- * Returns: (transfer none): an #EekKeyboard
+ * Returns: (transfer none): a LevelKeyboard
  */
 LevelKeyboard *
-eekboard_context_service_get_keyboard (LayoutHolder *context)
+eek_layout_holder_get_keyboard (LayoutHolder *context)
 {
     return context->priv->keyboard;
 }
@@ -195,7 +184,7 @@ void eekboard_context_service_set_hint_purpose(LayoutHolder *context,
     if (context->layout->hint != hint || context->layout->purpose != purpose) {
         context->layout->hint = hint;
         context->layout->purpose = purpose;
-        eekboard_context_service_use_layout(context, context->layout);
+        eek_layout_holder_use_layout(context, context->layout);
     }
 }
 
@@ -204,7 +193,7 @@ eekboard_context_service_set_overlay(LayoutHolder *context, const char* name) {
     if (g_strcmp0(context->layout->overlay_name, name)) {
         g_free(context->layout->overlay_name);
         context->layout->overlay_name = g_strdup(name);
-        eekboard_context_service_use_layout(context, context->layout);
+        eek_layout_holder_use_layout(context, context->layout);
     }
 }
 
@@ -213,15 +202,15 @@ eekboard_context_service_get_overlay(LayoutHolder *context) {
     return context->layout->overlay_name;
 }
 
-LayoutHolder *eekboard_context_service_new(struct squeek_layout_state *state)
+LayoutHolder *eek_layout_holder_new(struct squeek_layout_state *state)
 {
     LayoutHolder *context = g_object_new (EEKBOARD_TYPE_LAYOUT_HOLDER, NULL);
     context->layout = state;
-    eekboard_context_service_use_layout(context, context->layout);
+    eek_layout_holder_use_layout(context, context->layout);
     return context;
 }
 
-void eekboard_context_service_set_submission(LayoutHolder *context, struct submission *submission) {
+void eek_layout_holder_set_submission(LayoutHolder *context, struct submission *submission) {
     context->priv->submission = submission;
     if (context->priv->submission) {
         submission_set_keyboard(context->priv->submission, context->priv->keyboard);
@@ -243,7 +232,7 @@ static void settings_update_layout(struct gsettings_tracker *self) {
             self->layout->layout_name = g_strdup(keyboard_layout);
         }
         // This must actually update the UI.
-        eekboard_context_service_use_layout(self->context, self->layout);
+        eek_layout_holder_use_layout(self->context, self->layout);
     }
 }
 

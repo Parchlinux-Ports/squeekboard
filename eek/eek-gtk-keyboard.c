@@ -126,7 +126,7 @@ eek_gtk_keyboard_real_size_allocate (GtkWidget     *self,
     if (priv->layout->arrangement != new_type) {
         priv->layout->arrangement = new_type;
 
-        eekboard_context_service_use_layout(priv->eekboard_context, priv->layout);
+        eek_layout_holder_use_layout(priv->eekboard_context, priv->layout);
     }
 
     if (priv->renderer)
@@ -158,7 +158,7 @@ static void drag(EekGtkKeyboard *self,
     if (!priv->keyboard) {
         return;
     }
-    squeek_layout_drag(eekboard_context_service_get_keyboard(priv->eekboard_context)->layout,
+    squeek_layout_drag(eek_layout_holder_get_keyboard(priv->eekboard_context)->layout,
                        priv->submission,
                        x, y, eek_renderer_get_transformation(priv->renderer), time,
                        priv->eekboard_context, self);
@@ -170,7 +170,7 @@ static void release(EekGtkKeyboard *self, guint32 time)
     if (!priv->keyboard) {
         return;
     }
-    squeek_layout_release(eekboard_context_service_get_keyboard(priv->eekboard_context)->layout,
+    squeek_layout_release(eek_layout_holder_get_keyboard(priv->eekboard_context)->layout,
                           priv->submission,
                           eek_renderer_get_transformation(priv->renderer), time,
                           priv->eekboard_context, self);
@@ -343,7 +343,7 @@ on_notify_keyboard (GObject              *object,
                     EekGtkKeyboard *self) {
     (void)spec;
     EekGtkKeyboardPrivate *priv = (EekGtkKeyboardPrivate*)eek_gtk_keyboard_get_instance_private (self);
-    priv->keyboard = eekboard_context_service_get_keyboard(LAYOUT_HOLDER(object));
+    priv->keyboard = eek_layout_holder_get_keyboard(LAYOUT_HOLDER(object));
     if (priv->renderer) {
         eek_renderer_free(priv->renderer);
     }

@@ -73,9 +73,9 @@ struct gsettings_tracker {
 
 void eek_gsettings_tracker_init(struct gsettings_tracker* tracker, LayoutHolder *context, struct squeek_layout_state *layout);
 
-LayoutHolder *eekboard_context_service_new(struct squeek_layout_state *state);
-void eekboard_context_service_set_submission(LayoutHolder *context, struct submission *submission);
-LevelKeyboard *eekboard_context_service_get_keyboard(LayoutHolder *context);
+LayoutHolder *eek_layout_holder_new(struct squeek_layout_state *state);
+void eek_layout_holder_set_submission(LayoutHolder *context, struct submission *submission);
+LevelKeyboard *eek_layout_holder_get_keyboard(LayoutHolder *context);
 
 void eekboard_context_service_set_keymap(LayoutHolder *context,
                                          const LevelKeyboard *keyboard);
@@ -84,6 +84,6 @@ void eekboard_context_service_set_hint_purpose(LayoutHolder *context,
                                                uint32_t hint,
                                                uint32_t purpose);
 void
-eekboard_context_service_use_layout(LayoutHolder *context, struct squeek_layout_state *layout);
+eek_layout_holder_use_layout(LayoutHolder *context, struct squeek_layout_state *layout);
 G_END_DECLS
 #endif  /* EEKBOARD_CONTEXT_SERVICE_H */

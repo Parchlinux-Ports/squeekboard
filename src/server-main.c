@@ -206,7 +206,7 @@ main (int argc, char **argv)
 
     instance.ui_manager = squeek_uiman_new(instance.wayland.outputs);
 
-    instance.layout_holder = eekboard_context_service_new(&instance.layout_choice);
+    instance.layout_holder = eek_layout_holder_new(&instance.layout_choice);
     eek_gsettings_tracker_init(&instance.gsettings_tracker, instance.layout_holder, &instance.layout_choice);
     // set up dbus
 
@@ -282,7 +282,7 @@ main (int argc, char **argv)
                                          instance.wayland.seat,
                                          instance.layout_holder);
 
-    eekboard_context_service_set_submission(instance.layout_holder, instance.submission);
+    eek_layout_holder_set_submission(instance.layout_holder, instance.submission);
 
     ServerContextService *ui_context = server_context_service_new(
                 instance.layout_holder,
