@@ -99,6 +99,7 @@ settings_get_layout(GSettings *settings, char **type, char **layout)
 
 void
 eek_layout_holder_use_layout(LayoutHolder *context, struct squeek_layout_state *state) {
+    *context->layout = *state;
     gchar *layout_name = state->overlay_name;
 
     if (layout_name == NULL) {

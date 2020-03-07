@@ -124,9 +124,10 @@ eek_gtk_keyboard_real_size_allocate (GtkWidget     *self,
                 (uint32_t)(allocation->width - allocation->x) * scale,
                 (uint32_t)(allocation->height - allocation->y) * scale);
     if (priv->layout->arrangement != new_type) {
-        priv->layout->arrangement = new_type;
+        struct squeek_layout_state layout = *priv->layout;
+        layout.arrangement = new_type;
 
-        eek_layout_holder_use_layout(priv->eekboard_context, priv->layout);
+        eek_layout_holder_use_layout(priv->eekboard_context, &layout);
     }
 
     if (priv->renderer)
