@@ -14,12 +14,12 @@ views:
         - "й ц у к е н г ш щ з х"
         - "ф ы в а п р о л д ж э"
         - "Shift_L  я ч с м и т ь б ю  BackSpace"
-        - "show_numbers preferences    yo  space  hard_sign  period Return"
+        - "show_numbers preferences    ё  space  ъ  period Return"
     upper:
         - "Й Ц У К Е Н Г Ш Щ З Х"
         - "Ф Ы В А П Р О Л Д Ж Э"
         - "Shift_L   Я Ч С М И Т Ь Б Ю  BackSpace"
-        - "show_numbers preferences    Yo  space  Hard_sign  comma Return"
+        - "show_numbers preferences    Ё  space  Ъ  comma Return"
     numbers:
         - "1 2 3 4 5 6 7 8 9 0"
         - "@ # $ % & - _ + ( )"
@@ -85,15 +85,11 @@ buttons:
         keysym: "Return"
     colon:
         text: ":"
-    yo:
+    ё:
         outline: "narrow"
-        text: "ё"
-    Yo:
+    Ё:
         outline: "narrow"
-        text: "Ё"
-    hard_sign:
+    ъ:
         outline: "narrow"
-        text: "ъ"
-    Hard_sign:
+    Ъ:
         outline: "narrow"
-        text: "Ъ"
