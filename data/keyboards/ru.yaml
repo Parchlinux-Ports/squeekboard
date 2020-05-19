@@ -2,9 +2,8 @@
 outlines:
     default: { width: 32, height: 52 }
     altline: { width: 32, height: 52 }
-    wide: { width: 52, height: 52 }
+    wide: { width: 57, height: 52 }
     narrow: { width: 26, height: 52 }
-    switch: { width: 57, height: 52 }
     spaceline: { width: 107, height: 52 }
     fill: { width: 159, height: 52 }
     special: { width: 42, height: 52 }
@@ -50,17 +49,17 @@ buttons:
     show_numbers:
         action:
             set_view: "numbers"
-        outline: "switch"
+        outline: "wide"
         label: "123"
     show_numbers_from_symbols:
         action:
             set_view: "numbers"
-        outline: "switch"
+        outline: "wide"
         label: "123"
     show_letters:
         action:
             set_view: "base"
-        outline: "switch"
+        outline: "wide"
         label: "АБВ"
     show_symbols:
         action:
