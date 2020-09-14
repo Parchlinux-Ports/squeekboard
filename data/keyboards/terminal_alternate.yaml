@@ -32,7 +32,7 @@ views:
         - *fn-hyphen
     logo:
         - *esc-num
-        - "Tab Menu Bl Bl Bl Bl Bl Bl Bl Bl - Del"
+        - "Tab Menu Bl Bl Bl Bl Bl Bl Bl Bl \" Del"
         - "Ctrl Prefs Bl Bl Bl Bl Bl Bl ; : Enter"
         - "Shift Symbols MathSetBool MathChar Bl Bl Bl Bl Bl , . / Alt"
         - *fn-hyphen
