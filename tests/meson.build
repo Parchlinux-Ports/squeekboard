@@ -65,7 +65,8 @@ foreach layout : [
     'se',
     'ua',
     'terminal',
-    
+    'terminal_alternate',
+
     'emoji',
 ]
     test(
