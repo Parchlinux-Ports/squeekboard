@@ -1,0 +1,221 @@
+---
+outlines:
+    default: { width: 42, height: 69 }
+    spaceline: { width: 164, height: 69 }
+    mod: { width: 64, height: 69 }
+    modlarge: { width: 84, height: 69 }
+
+views:
+    base:
+        - &esc-num "Esc 1 2 3 4 5 6 7 8 9 0 Backspace"
+        - "Tab q w e r t y u i o p ' Del"
+        - "Ctrl a s d f g h j k l ; Enter"
+        - "Shift Symbols z x c v b n m , . / Alt"
+        - &fn-hyphen "Fnkeys Logo - Space ← ↓ ↑ → "
+    upper:
+        - &esc-punc "Esc ! @ # $ % ^ & * ( ) Backspace"
+        - "Tab Q W E R T Y U I O P \" Del"
+        - "Ctrl A S D F G H J K L : Enter"
+        - "Shift Symbols Z X C V B N M < > ? Alt"
+        - &fn-unders "Fnkeys Logo _ Space ← ↓ ↑ → "
+    symbols:
+        - *esc-punc
+        - "Tab á é í ` ~ - _ { } ' \" Del"
+        - "Ctrl ó ö ő £ \\ | [ ] ; : Enter"
+        - "Shift Symbols ú ü ű € ¥ + = < > ? Alt"
+        - *fn-unders
+    fnkeys:
+        - "Esc F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 Backspace"
+        - "Tab Menu Home End Insert Break PgUp PgDn F11 F12 \" Del"
+        - "Ctrl Prefs Bl Bl Bl Bl Bl Bl ; : Enter"
+        - "Shift Symbols MathSetBool MathChar Bl Bl Bl Bl Bl , . / Alt"
+        - *fn-hyphen
+    logo:
+        - *esc-num
+        - "Tab Menu Bl Bl Bl Bl Bl Bl Bl Bl - Del"
+        - "Ctrl Prefs Bl Bl Bl Bl Bl Bl ; : Enter"
+        - "Shift Symbols MathSetBool MathChar Bl Bl Bl Bl Bl , . / Alt"
+        - *fn-hyphen
+    setandbool:
+        - *esc-num
+        - "Tab ∪ ∩ ⊂ ⊃ ⊄ ⊅ ⊆ ⊇ ≡ ≢ Bl Del"
+        - "Ctrl ∞ ∧ ∨ ⊻ ⊼ ∫ … ∴ ∵ : Enter"
+        - "Shift Symbols ∑ ∀ ∃ ∄ ∅ ∈ ∋ ∉ ∌ ∏ Alt"
+        - *fn-hyphen
+    mathalpha:
+        - *esc-punc
+        - "Tab ℂ ℝ ℚ ℤ ℕ Bl Bl Bl Bl Bl Bl Del"
+        - "Ctrl Bl Bl Bl Bl Bl Bl Bl Bl Bl Bl Enter"
+        - "Shift Symbols Bl Bl Bl Bl Bl Bl Bl Bl Bl Bl Alt"
+        - *fn-hyphen
+
+buttons:
+    Bl:
+        outline: "default"
+        label: " "
+    Menu:
+        outline: "modlarge"
+        label: "Menu"
+    Prefs:
+        action: "show_prefs"
+        outline: "modlarge"
+        label: "Prefs"
+    Esc:
+        outline: "modlarge"
+        keysym: "Escape"
+        label: "⎋"
+    Tab:
+        outline: "mod"
+        keysym: "Tab"
+        label: "⇥"
+    Ctrl:
+        modifier: "Control"
+        outline: "modlarge"
+        label: "⎈"
+    Shift:
+        action:
+            locking:
+                lock_view: "upper"
+                unlock_view: "base"
+        outline: "mod"
+        label: "⇧"
+    Symbols:
+        action:
+            locking:
+                lock_view: "symbols"
+                unlock_view: "base"
+        outline: "default"
+        label: "∴"
+    Fnkeys:
+        action:
+            locking:
+                lock_view: "fnkeys"
+                unlock_view: "base"
+        outline: "mod"
+        label: "𝙵𝗇"
+    Logo:
+        outline: "mod"
+        label: "∞"
+        action:
+            locking:
+              lock_view: "logo"
+              unlock_view: "base"
+    MathSetBool:
+        action:
+            locking:
+                lock_view: "setandbool"
+                unlock_view: "base"
+        outline: "default"
+        label: "Σ"
+    MathChar:
+        action:
+            locking:
+                lock_view: "mathalpha"
+                unlock_view: "base"
+        outline: "default"
+        label: "æ"
+    Space:
+        outline: "spaceline"
+        label: "␣"
+        text: " "
+    Backspace:
+        outline: "modlarge"
+        label: "⌫"
+        action: "erase"
+    Del:
+        outline: "mod"
+        keysym: "Delete"
+        label: "⌦"
+    Enter:
+        outline: "modlarge"
+        label: "⌤"
+        keysym: "Return"
+    Alt:
+        modifier: "Alt"
+        outline: "mod"
+        label: "⌥"
+    Home:
+        outline: "default"
+        keysym: "Home"
+        label: "⇱"
+    End:
+        outline: "default"
+        keysym: "End"
+        label: "⇲"
+    Insert:
+        outline: "default"
+        keysym: "Insert"
+        label: "⎀"
+    Break:
+        outline: "default"
+        keysym: "Cancel"
+        label: "⎊"
+    PgUp:
+        outline: "default"
+        keysym: "Page_Up"
+        label: "⇞"
+    PgDn:
+        outline: "default"
+        keysym: "Page_Down"
+        label: "⇟"
+    F1:
+        outline: "default"
+        keysym: "F1"
+        label: "𝙵₁"
+    F2:
+        outline: "default"
+        keysym: "F2"
+        label: "𝙵₂"
+    F3:
+        outline: "default"
+        keysym: "F3"
+        label: "𝙵₃"
+    F4:
+        outline: "default"
+        keysym: "F4"
+        label: "𝙵₄"
+    F5:
+        outline: "default"
+        keysym: "F5"
+        label: "𝙵₅"
+    F6:
+        outline: "default"
+        keysym: "F6"
+        label: "𝙵₆"
+    F7:
+        outline: "default"
+        keysym: "F7"
+        label: "𝙵₇"
+    F8:
+        outline: "default"
+        keysym: "F8"
+        label: "𝙵₈"
+    F9:
+        outline: "default"
+        keysym: "F9"
+        label: "𝙵₉"
+    F10:
+        outline: "default"
+        keysym: "F10"
+        label: "𝙵₁₀"
+    F11:
+        outline: "default"
+        keysym: "F11"
+        label: "𝙵₁₁"
+    F12:
+        outline: "default"
+        keysym: "F12"
+        label: "𝙵₁₂"
+    "↑":
+        outline: "mod"
+        keysym: "Up"
+    "↓":
+        outline: "mod"
+        keysym: "Down"
+    "←":
+        outline: "mod"
+        keysym: "Left"
+    "→":
+        outline: "mod"
+        keysym: "Right"
+
