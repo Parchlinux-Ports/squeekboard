@@ -68,7 +68,7 @@ fn check_layout(layout: Layout) {
                     match state.key_get_one_sym(*keycode) {
                         xkb::KEY_NoSymbol => {
                             eprintln!("{}", keymap_str);
-                            panic!("Keysym {} on key {:?} can't be resolved", keycode, button.name);
+                            panic!("Keysym for code {} on key {} ({:?}) can't be resolved", keycode, button.name.to_string_lossy(), button.name);
                         },
                         _ => {},
                     }

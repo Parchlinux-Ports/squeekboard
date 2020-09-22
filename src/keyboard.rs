@@ -138,25 +138,43 @@ pub fn generate_keymap(
 
     xkb_keycodes \"squeekboard\" {{
         minimum = 8;
-        maximum = 255;"
+        maximum = 999;"
     )?;
     
-    for (name, state) in keystates.iter() {
-        match &state.action {
+    // Not all layouts fit in 255 characters... so bump the limit to 999.
+    // Xorg can only consume up to 255, so this may not work in Xwayland.
+    // Two possible solutions:
+    // - use levels to cram multiple characters into one key
+    // - swap layouts on key presses
+    for keycode in 9..999 {
+        write!(
+            buf,
+            "
+        <I{}> = {0};",
+            keycode,
+        )?;
+    }
+
+    writeln!(
+        buf,
+        "
+        indicator 1 = \"Caps Lock\"; // Xwayland won't accept without it.
+    }};
+    
+    xkb_symbols \"squeekboard\" {{
+"
+    )?;
+    
+    for (_name, state) in keystates.iter() {
+        match &state.action{
             Action::Submit { text: _, keys } => {
-                if let 0 = keys.len() {
-                    log_print!(
-                        logging::Level::Warning,
-                        "Key {} has no keysyms", name,
-                    );
-                };
                 for (named_keysym, keycode) in keys.iter().zip(&state.keycodes) {
                     write!(
                         buf,
                         "
-        <{}> = {};",
-                        named_keysym.0,
+        key <I{}> {{ [ {} ] }};",
                         keycode,
+                        named_keysym.0,
                     )?;
                 }
             },
@@ -165,7 +183,7 @@ pub fn generate_keymap(
                 write!(
                     buf,
                     "
-        <BackSpace> = {};",
+        key <I{}> {{ [ BackSpace ] }};",
                     keycodes.next().expect("Erase key has no keycode"),
                 )?;
                 if let Some(_) = keycodes.next() {
@@ -175,51 +193,46 @@ pub fn generate_keymap(
                     );
                 }
             },
-            _ => {},
+            Action::SetView(_) => {},
+            Action::LockView{ .. } => {},
+            Action::ApplyModifier(_) => {},
+            Action::ShowPreferences => {},
         }
     }
-    
-    writeln!(
-        buf,
-        "
-    }};
-    
-    xkb_symbols \"squeekboard\" {{
 
-        name[Group1] = \"Letters\";
-        name[Group2] = \"Numbers/Symbols\";
-        
-        key <BackSpace> {{ [ BackSpace ] }};"
-    )?;
-    
-    for (_name, state) in keystates.iter() {
-        if let Action::Submit { text: _, keys } = &state.action {
-            for keysym in keys.iter() {
-                write!(
-                    buf,
-                    "
-        key <{}> {{ [ {0} ] }};",
-                    keysym.0,
-                )?;
-            }
-        }
-    }
     writeln!(
         buf,
         "
     }};
 
     xkb_types \"squeekboard\" {{
+        virtual_modifiers Squeekboard; // No modifiers! Needed for Xorg for some reason.
+    
+        // Those names are needed for Xwayland.
+        type \"ONE_LEVEL\" {{
+            modifiers= none;
+            level_name[Level1]= \"Any\";
+        }};
+        type \"TWO_LEVEL\" {{
+            level_name[Level1]= \"Base\";
+        }};
+        type \"ALPHABETIC\" {{
+            level_name[Level1]= \"Base\";
+        }};
+        type \"KEYPAD\" {{
+            level_name[Level1]= \"Base\";
+        }};
+        type \"SHIFT+ALT\" {{
+            level_name[Level1]= \"Base\";
+        }};
 
-	type \"TWO_LEVEL\" {{
-            modifiers = Shift;
-            map[Shift] = Level2;
-            level_name[Level1] = \"Base\";
-            level_name[Level2] = \"Shift\";
-	}};
     }};
 
     xkb_compatibility \"squeekboard\" {{
+        // Needed for Xwayland again.
+        interpret Any+AnyOf(all) {{
+            action= SetMods(modifiers=modMapMods,clearLocks);
+        }};
     }};
 }};"
     )?;
