@@ -9,7 +9,6 @@ use std::rc::Rc;
 use std::string::FromUtf8Error;
 
 use ::action::Action;
-use ::logging;
 
 // Traits
 use std::io::Write;
@@ -125,11 +124,9 @@ impl From<io::Error> for FormattingError {
 }
 
 /// Generates a de-facto single level keymap.
-// TODO: don't rely on keys and their order,
-// but rather on what keysyms and keycodes are in use.
-// Iterating actions makes it hard to deduplicate keysyms.
+/// Key codes must not repeat and must remain between 9 and 255.
 pub fn generate_keymap(
-    keystates: &HashMap::<String, KeyState>
+    symbolmap: HashMap::<String, KeyCode>,
 ) -> Result<String, FormattingError> {
     let mut buf: Vec<u8> = Vec::new();
     writeln!(
@@ -138,15 +135,14 @@ pub fn generate_keymap(
 
     xkb_keycodes \"squeekboard\" {{
         minimum = 8;
-        maximum = 999;"
+        maximum = 255;"
     )?;
     
-    // Not all layouts fit in 255 characters... so bump the limit to 999.
-    // Xorg can only consume up to 255, so this may not work in Xwayland.
+    // Xorg can only consume up to 255 keys, so this may not work in Xwayland.
     // Two possible solutions:
     // - use levels to cram multiple characters into one key
     // - swap layouts on key presses
-    for keycode in 9..999 {
+    for keycode in symbolmap.values() {
         write!(
             buf,
             "
@@ -165,39 +161,14 @@ pub fn generate_keymap(
 "
     )?;
     
-    for (_name, state) in keystates.iter() {
-        match &state.action{
-            Action::Submit { text: _, keys } => {
-                for (named_keysym, keycode) in keys.iter().zip(&state.keycodes) {
-                    write!(
-                        buf,
-                        "
-        key <I{}> {{ [ {} ] }};",
-                        keycode,
-                        named_keysym.0,
-                    )?;
-                }
-            },
-            Action::Erase => {
-                let mut keycodes = state.keycodes.iter();
-                write!(
-                    buf,
-                    "
-        key <I{}> {{ [ BackSpace ] }};",
-                    keycodes.next().expect("Erase key has no keycode"),
-                )?;
-                if let Some(_) = keycodes.next() {
-                    log_print!(
-                        logging::Level::Bug,
-                        "Erase key has multiple keycodes",
-                    );
-                }
-            },
-            Action::SetView(_) => {},
-            Action::LockView{ .. } => {},
-            Action::ApplyModifier(_) => {},
-            Action::ShowPreferences => {},
-        }
+    for (name, keycode) in symbolmap.iter() {
+        write!(
+            buf,
+            "
+key <I{}> {{ [ {} ] }};",
+            keycode,
+            name,
+        )?;
     }
 
     writeln!(
@@ -247,21 +218,13 @@ mod tests {
     
     use xkbcommon::xkb;
 
-    use ::action::KeySym;
-
     #[test]
     fn test_keymap_multi() {
         let context = xkb::Context::new(xkb::CONTEXT_NO_FLAGS);
 
-        let keymap_str = generate_keymap(&hashmap!{
-            "ac".into() => KeyState {
-                action: Action::Submit {
-                    text: None,
-                    keys: vec!(KeySym("a".into()), KeySym("c".into())),
-                },
-                keycodes: vec!(9, 10),
-                pressed: PressType::Released,
-            },
+        let keymap_str = generate_keymap(hashmap!{
+            "a".into() => 9,
+            "c".into() => 10,
         }).unwrap();
 
         let keymap = xkb::Keymap::new_from_string(
