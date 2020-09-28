@@ -35,16 +35,18 @@ G_BEGIN_DECLS
 /// Keyboard state holder
 struct _LevelKeyboard {
     struct squeek_layout *layout; // owned
-    struct xkb_keymap *keymap; // owned
-    int keymap_fd; // keymap formatted as XKB string
-    size_t keymap_len; // length of the data inside keymap_fd
-
+// FIXME: This no longer needs to exist, keymap was folded into layout.
     guint id; // as a key to layout choices
 };
 typedef struct _LevelKeyboard LevelKeyboard;
 
-gchar *             eek_keyboard_get_keymap
-                                     (LevelKeyboard *keyboard);
+/// Keymap container for Rust interoperability.
+struct KeyMap {
+    uint32_t fd; // keymap formatted as XKB string
+    size_t fd_len; // length of the data inside keymap_fd
+};
+
+gchar *eek_keyboard_get_keymap(LevelKeyboard *keyboard);
 
 LevelKeyboard*
 level_keyboard_new (struct squeek_layout *layout);

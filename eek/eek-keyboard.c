@@ -31,29 +31,18 @@
 
 #include "eek-keyboard.h"
 
-void level_keyboard_free(LevelKeyboard *self) {
-    xkb_keymap_unref(self->keymap);
-    close(self->keymap_fd);
-    squeek_layout_free(self->layout);
-    g_free(self);
+/// External linkage for Rust.
+/// Don't call multiple times on the same copy, just in Drop.
+void eek_key_map_deinit(struct KeyMap *self) {
+    close(self->fd);
 }
 
-LevelKeyboard*
-level_keyboard_new (struct squeek_layout *layout)
-{
-    LevelKeyboard *keyboard = g_new0(LevelKeyboard, 1);
-
-    if (!keyboard) {
-        g_error("Failed to create a keyboard");
-    }
-    keyboard->layout = layout;
-
+/// External linkage for Rust.
+struct KeyMap eek_key_map_from_str(char *keymap_str) {
     struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     if (!context) {
         g_error("No context created");
     }
-
-    const gchar *keymap_str = squeek_layout_get_keymap(keyboard->layout);
 
     struct xkb_keymap *keymap = xkb_keymap_new_from_string(context, keymap_str,
         XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
@@ -62,10 +51,8 @@ level_keyboard_new (struct squeek_layout *layout)
         g_error("Bad keymap:\n%s", keymap_str);
 
     xkb_context_unref(context);
-    keyboard->keymap = keymap;
-
     keymap_str = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
-    keyboard->keymap_len = strlen(keymap_str) + 1;
+    size_t keymap_len = strlen(keymap_str) + 1;
 
     g_autofree char *path = strdup("/eek_keymap-XXXXXX");
     char *r = &path[strlen(path) - 6];
@@ -79,17 +66,39 @@ level_keyboard_new (struct squeek_layout *layout)
     if (keymap_fd < 0) {
         g_error("Failed to set up keymap fd");
     }
-    keyboard->keymap_fd = keymap_fd;
+
     shm_unlink(path);
-    if (ftruncate(keymap_fd, (off_t)keyboard->keymap_len)) {
+    if (ftruncate(keymap_fd, (off_t)keymap_len)) {
         g_error("Failed to increase keymap fd size");
     }
-    char *ptr = mmap(NULL, keyboard->keymap_len, PROT_WRITE, MAP_SHARED,
+    char *ptr = mmap(NULL, keymap_len, PROT_WRITE, MAP_SHARED,
         keymap_fd, 0);
     if ((void*)ptr == (void*)-1) {
         g_error("Failed to set up mmap");
     }
-    strncpy(ptr, keymap_str, keyboard->keymap_len);
-    munmap(ptr, keyboard->keymap_len);
+    strncpy(ptr, keymap_str, keymap_len);
+    munmap(ptr, keymap_len);
+    free(keymap_str);
+    xkb_keymap_unref(keymap);
+    struct KeyMap km = {
+        .fd = keymap_fd,
+        .fd_len = keymap_len,
+    };
+    return km;
+}
+
+void level_keyboard_free(LevelKeyboard *self) {
+    squeek_layout_free(self->layout);
+    g_free(self);
+}
+
+LevelKeyboard*
+level_keyboard_new (struct squeek_layout *layout)
+{
+    LevelKeyboard *keyboard = g_new0(LevelKeyboard, 1);
+    if (!keyboard) {
+        g_error("Failed to create a keyboard");
+    }
+    keyboard->layout = layout;
     return keyboard;
 }
