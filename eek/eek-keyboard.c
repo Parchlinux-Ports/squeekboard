@@ -51,8 +51,9 @@ struct KeyMap eek_key_map_from_str(char *keymap_str) {
         g_error("Bad keymap:\n%s", keymap_str);
 
     xkb_context_unref(context);
-    keymap_str = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
-    size_t keymap_len = strlen(keymap_str) + 1;
+
+    char *xkb_keymap_str = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
+    size_t keymap_len = strlen(xkb_keymap_str) + 1;
 
     g_autofree char *path = strdup("/eek_keymap-XXXXXX");
     char *r = &path[strlen(path) - 6];
@@ -76,9 +77,9 @@ struct KeyMap eek_key_map_from_str(char *keymap_str) {
     if ((void*)ptr == (void*)-1) {
         g_error("Failed to set up mmap");
     }
-    strncpy(ptr, keymap_str, keymap_len);
+    strncpy(ptr, xkb_keymap_str, keymap_len);
     munmap(ptr, keymap_len);
-    free(keymap_str);
+    free(xkb_keymap_str);
     xkb_keymap_unref(keymap);
     struct KeyMap km = {
         .fd = keymap_fd,
