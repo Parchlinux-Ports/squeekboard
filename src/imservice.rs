@@ -380,7 +380,8 @@ impl IMService {
                 let cursor_position = self.pending.cursor.try_into().unwrap(); // Converts u32 of cursor to usize
                 self.pending
                     .surrounding_text
-                    .insert_str(cursor_position, &text);
+                    .insert_str(cursor_position, text);
+                self.pending.cursor += text.len() as u32;
                 unsafe {
                     c::eek_input_method_commit_string(self.im, text.as_ptr())
                 }
