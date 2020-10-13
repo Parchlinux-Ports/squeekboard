@@ -84,7 +84,7 @@ pub mod c {
             surrounding_text: into_cstring(text)
                 .expect("Received invalid string")
                 .expect("Received null string"),
-            surrounding_cursor: cursor,
+            cursor,
             ..imservice.pending.clone()
         };
     }
@@ -146,10 +146,6 @@ pub mod c {
         let active_changed = imservice.current.active ^ imservice.pending.active;
 
         imservice.current = imservice.pending.clone();
-        imservice.pending = IMProtocolState {
-            active: imservice.current.active,
-            ..IMProtocolState::default()
-        };
 
         if active_changed {
             if imservice.current.active {
@@ -314,7 +310,7 @@ impl TryFrom<u32> for ChangeCause {
 #[derive(Clone)]
 struct IMProtocolState {
     surrounding_text: CString,
-    surrounding_cursor: u32,
+    cursor: u32,
     content_purpose: ContentPurpose,
     content_hint: ContentHint,
     text_change_cause: ChangeCause,
@@ -325,7 +321,7 @@ impl Default for IMProtocolState {
     fn default() -> IMProtocolState {
         IMProtocolState {
             surrounding_text: CString::default(),
-            surrounding_cursor: 0, // TODO: mark that there's no cursor
+            cursor: 0, // TODO: mark that there's no cursor
             content_hint: ContentHint::NONE,
             content_purpose: ContentPurpose::Normal,
             text_change_cause: ChangeCause::InputMethod,
@@ -378,9 +374,13 @@ impl IMService {
         imservice
     }
     
-    pub fn commit_string(&self, text: &CString) -> Result<(), SubmitError> {
+    pub fn commit_string(&mut self, text: &CString) -> Result<(), SubmitError> {
         match self.current.active {
             true => {
+                let cursor_position = self.pending.cursor.try_into().unwrap(); // Converts u32 of cursor to usize
+                self.pending
+                    .surrounding_text
+                    .insert_str(cursor_position, &text);
                 unsafe {
                     c::eek_input_method_commit_string(self.im, text.as_ptr())
                 }
@@ -391,11 +391,16 @@ impl IMService {
     }
 
     pub fn delete_surrounding_text(
-        &self,
+        &mut self,
         before: u32, after: u32,
     ) -> Result<(), SubmitError> {
         match self.current.active {
             true => {
+                let cursor_position: usize = self.pending.cursor.try_into().unwrap(); // Converts u32 of cursor to usize
+                self.pending.surrounding_text.replace_range(
+                    cursor_position - (before as usize)..cursor_position + (after as usize),
+                    "",
+                );
                 unsafe {
                     c::eek_input_method_delete_surrounding_text(
                         self.im,
@@ -415,6 +420,7 @@ impl IMService {
                     c::eek_input_method_commit(self.im, self.serial.0)
                 }
                 self.serial += Wrapping(1u32);
+                imservice_handle_done(self);
                 Ok(())
             },
             false => Err(SubmitError::NotActive),
