@@ -54,7 +54,7 @@ pub mod c {
         im: *const InputMethod)
     {
         let imservice = check_imservice(imservice, im).unwrap();
-        imservice.preedit_string = String::new();
+        imservice.preedit_string = String::new(); // I don't think this is ever used. Remove it?
         imservice.pending = IMProtocolState {
             active: true,
             ..IMProtocolState::default()
@@ -344,7 +344,7 @@ pub struct IMService {
 
     pending: IMProtocolState,
     current: IMProtocolState, // turn current into an idiomatic representation?
-    preedit_string: String,
+    preedit_string: String, // I don't think this is ever used. Remove it?
     serial: Wrapping<u32>,
 }
 
@@ -366,7 +366,7 @@ impl IMService {
             state_manager,
             pending: IMProtocolState::default(),
             current: IMProtocolState::default(),
-            preedit_string: String::new(),
+            preedit_string: String::new(), // I don't think this is ever used. Remove it?
             serial: Wrapping(0u32),
         });
         unsafe {
