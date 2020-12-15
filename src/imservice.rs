@@ -151,14 +151,19 @@ pub mod c {
 
         if active_changed {
             (imservice.active_callback)(imservice.current.active);
-            if imservice.current.active {
-                unsafe {
-                    eekboard_context_service_set_hint_purpose(
-                        imservice.state_manager,
-                        imservice.current.content_hint.bits(),
-                        imservice.current.content_purpose.clone() as u32,
-                    );
-                }
+            let (hint, purpose) = if imservice.current.active {(
+                imservice.current.content_hint,
+                imservice.current.content_purpose.clone(),
+            )} else {(
+                ContentHint::NONE,
+                ContentPurpose::Normal,
+            )};
+            unsafe {
+                eekboard_context_service_set_hint_purpose(
+                    imservice.state_manager,
+                    hint.bits(),
+                    purpose as u32,
+                );
             }
         }
     }
