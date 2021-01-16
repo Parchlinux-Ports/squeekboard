@@ -157,6 +157,12 @@ squeekboard (1.10.0) amber-phone; urgency=medium
 
  -- Dorota Czaplejewicz <dorota.czaplejewicz@puri.sm>  Mon, 19 Oct 2020 14:07:01 +0000
 
+squeekboard (1.9.3.0pureos0.1) byzantium; urgency=medium
+
+  * Upload to byzantium
+
+ -- Guido Günther <agx@sigxcpu.org>  Tue, 22 Sep 2020 12:42:41 +0200
+
 squeekboard (1.9.3) amber-phone; urgency=medium
 
   [ Björn Tantau ]
