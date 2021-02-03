@@ -1,7 +1,7 @@
 project(
     'squeekboard',
     'c', 'rust',
-    version: '1.9.3',
+    version: '1.12.0',
     license: 'GPLv3',
     meson_version: '>=0.51.0',
     default_options: [
@@ -19,14 +19,17 @@ add_project_arguments(
     '-Werror=missing-field-initializers',
     '-Werror=incompatible-pointer-types',
     '-Werror=int-conversion',
+    '-Werror=redundant-decls',
+    '-Werror=parentheses',
     '-Wformat-nonliteral',
     '-Wformat-security',
+    '-Wformat',
     '-Winit-self',
     '-Wmaybe-uninitialized',
     '-Wold-style-definition',
     '-Wredundant-decls',
     '-Wstrict-prototypes',
-    '-Wunused-function',
+    '-Wunused',
   ],
   language: 'c'
 )
@@ -38,6 +41,16 @@ conf_data = configuration_data()
 if get_option('buildtype').startswith('debug')
     add_project_arguments('-DDEBUG=1', language : 'c')
 endif
+
+if get_option('strict')
+    add_project_arguments(
+        [
+            '-Werror',
+        ],
+        language: 'c'
+    )
+endif
+
 if get_option('buildtype') != 'plain'
     add_project_arguments('-fstack-protector-strong', language: 'c')
 endif
@@ -70,6 +83,7 @@ summary = [
 message('\n'.join(summary))
 
 # Rust deps are changing, depending on compile flags. Cargo can't handle it alone.
+# As a side effect, Cargo.toml never gets used.
 cargo_toml_in = files('Cargo.toml.in')
 path_data = configuration_data()
 path_data.set('path', meson.source_root())
@@ -83,7 +97,7 @@ cargo_toml_base = configure_file(
 cargo_deps = files('Cargo.deps')
 
 if get_option('legacy') == true
-    cargo_build_flags += ['--features', 'gtk_v0_5,gio_v0_5']
+    cargo_build_flags += ['--features', 'gtk_v0_5,gio_v0_5,rustc_less_1_36']
     cargo_deps = files('Cargo.deps.legacy')
 endif
     
@@ -97,7 +111,7 @@ cargo_toml = custom_target(
 
 dep_cargo = find_program('cargo')
 cargo_script = find_program('cargo.sh')
-cargo_build = find_program('cargo_build.sh')
+cargo_build = find_program('cargo_build.py')
 
 subdir('data')
 subdir('protocols')

@@ -14,6 +14,7 @@ sources = [
   config_h,
   'dbus.c',
   'imservice.c',
+  'popover.c',
   'server-context-service.c',
   'wayland.c',
   '../eek/eek.c',
@@ -79,6 +80,7 @@ test(
     'rstest',
     cargo_script,
     args: ['test'] + cargo_build_flags,
+    env: ['SOURCE_DIR=' + meson.source_root()],
     # this is a whole Carg-based test suite, let it run for a while
     timeout: 900,
     depends: [build_rstests, cargo_toml],

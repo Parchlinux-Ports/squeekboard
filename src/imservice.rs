@@ -23,7 +23,7 @@ pub mod c {
 
     use std::os::raw::{c_char, c_void};
 
-    pub use ::submission::c::UIManager;
+    pub use ::ui_manager::c::UIManager;
     pub use ::submission::c::StateManager;
 
     // The following defined in C
@@ -41,8 +41,6 @@ pub mod c {
         pub fn eek_input_method_delete_surrounding_text(im: *mut InputMethod, before: u32, after: u32);
         pub fn eek_input_method_commit(im: *mut InputMethod, serial: u32);
         fn eekboard_context_service_set_hint_purpose(state: *const StateManager, hint: u32, purpose: u32);
-        fn server_context_service_show_keyboard(imservice: *const UIManager);
-        fn server_context_service_hide_keyboard(imservice: *const UIManager);
     }
     
     // The following defined in Rust. TODO: wrap naked pointers to Rust data inside RefCells to prevent multiple writers
@@ -152,20 +150,14 @@ pub mod c {
         };
 
         if active_changed {
+            (imservice.active_callback)(imservice.current.active);
             if imservice.current.active {
-                if let Some(ui) = imservice.ui_manager {
-                    unsafe { server_context_service_show_keyboard(ui); }
-                }
                 unsafe {
                     eekboard_context_service_set_hint_purpose(
                         imservice.state_manager,
                         imservice.current.content_hint.bits(),
                         imservice.current.content_purpose.clone() as u32,
                     );
-                }
-            } else {
-                if let Some(ui) = imservice.ui_manager {
-                    unsafe { server_context_service_hide_keyboard(ui); }
                 }
             }
         }
@@ -184,9 +176,7 @@ pub mod c {
         // the keyboard is already decommissioned
         imservice.current.active = false;
 
-        if let Some(ui) = imservice.ui_manager {
-            unsafe { server_context_service_hide_keyboard(ui); }
-        }
+        (imservice.active_callback)(imservice.current.active);
     }    
 
     // FIXME: destroy and deallocate
@@ -339,8 +329,7 @@ pub struct IMService {
     pub im: *mut c::InputMethod,
     /// Unowned reference. Be careful, it's shared with C at large
     state_manager: *const c::StateManager,
-    /// Unowned reference. Be careful, it's shared with C at large
-    pub ui_manager: Option<*const c::UIManager>,
+    active_callback: Box<dyn Fn(bool)>,
 
     pending: IMProtocolState,
     current: IMProtocolState, // turn current into an idiomatic representation?
@@ -357,12 +346,13 @@ impl IMService {
     pub fn new(
         im: *mut c::InputMethod,
         state_manager: *const c::StateManager,
+        active_callback: Box<dyn Fn(bool)>,
     ) -> Box<IMService> {
         // IMService will be referenced to by C,
         // so it needs to stay in the same place in memory via Box
         let imservice = Box::new(IMService {
             im,
-            ui_manager: None,
+            active_callback,
             state_manager,
             pending: IMProtocolState::default(),
             current: IMProtocolState::default(),
@@ -377,7 +367,7 @@ impl IMService {
         }
         imservice
     }
-    
+
     pub fn commit_string(&self, text: &CString) -> Result<(), SubmitError> {
         match self.current.active {
             true => {

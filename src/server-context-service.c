@@ -31,6 +31,7 @@
 enum {
     PROP_0,
     PROP_VISIBLE,
+    PROP_ENABLED,
     PROP_LAST
 };
 
@@ -42,6 +43,7 @@ struct _ServerContextService {
     struct submission *submission; // unowned
     struct squeek_layout_state *layout;
     struct ui_manager *manager; // unowned
+    struct vis_manager *vis_manager; // owned
 
     gboolean visible;
     PhoshLayerSurface *window;
@@ -83,13 +85,20 @@ on_notify_unmap (ServerContextService *self, GtkWidget *widget)
 }
 
 static uint32_t
-calculate_height(int32_t width)
+calculate_height(int32_t width, GdkRectangle *geometry)
 {
-    uint32_t height = 180;
-    if (width < 360 && width > 0) {
-        height = ((unsigned)width * 7 / 12); // to match 360×210
-    } else if (width < 540) {
-        height = 180 + (540 - (unsigned)width) * 30 / 180; // smooth transition
+    uint32_t height;
+    if (geometry->width > geometry->height) {
+        // 1:5 ratio works fine on lanscape mode, and makes sure there's
+        // room left for the app window
+        height = width / 5;
+    } else {
+        if (width < 540 && width > 0) {
+            height = ((unsigned)width * 7 / 12); // to match 360×210
+        } else {
+            // Here we switch to wide layout, less height needed
+            height = ((unsigned)width * 7 / 22);
+        }
     }
     return height;
 }
@@ -97,6 +106,10 @@ calculate_height(int32_t width)
 static void
 on_surface_configure(ServerContextService *self, PhoshLayerSurface *surface)
 {
+    GdkDisplay *display = NULL;
+    GdkWindow *window = NULL;
+    GdkMonitor *monitor = NULL;
+    GdkRectangle geometry;
     gint width;
     gint height;
 
@@ -108,11 +121,27 @@ on_surface_configure(ServerContextService *self, PhoshLayerSurface *surface)
                  "configured-height", &height,
                  NULL);
 
-    // When the geometry event comes after surface.configure,
-    // this entire height calculation does nothing.
-    // guint desired_height = squeek_uiman_get_perceptual_height(context->manager);
-    // Temporarily use old method, until the size manager is complete.
-    guint desired_height = calculate_height(width);
+    // In order to improve height calculation, we need the monitor geometry so
+    // we can use different algorithms for portrait and landscape mode.
+    // Note: this is a temporary fix until the size manager is complete.
+    display = gdk_display_get_default ();
+    if (display) {
+        window = gtk_widget_get_window (GTK_WIDGET (surface));
+    }
+    if (window) {
+        monitor = gdk_display_get_monitor_at_window (display, window);
+    }
+    if (monitor) {
+        gdk_monitor_get_geometry (monitor, &geometry);
+    } else {
+        geometry.width = geometry.height = 0;
+    }
+
+     // When the geometry event comes after surface.configure,
+     // this entire height calculation does nothing.
+     // guint desired_height = squeek_uiman_get_perceptual_height(context->manager);
+     // Temporarily use old method, until the size manager is complete.
+    guint desired_height = calculate_height(width, &geometry);
 
     guint configured_height = (guint)height;
     // if height was already requested once but a different one was given
@@ -133,8 +162,9 @@ on_surface_configure(ServerContextService *self, PhoshLayerSurface *surface)
 static void
 make_window (ServerContextService *self)
 {
-    if (self->window)
+    if (self->window) {
         g_error("Window already present");
+    }
 
     struct squeek_output_handle output = squeek_outputs_get_current(squeek_wayland->outputs);
     squeek_uiman_set_output(self->manager, output);
@@ -196,49 +226,75 @@ make_widget (ServerContextService *self)
     gtk_widget_show_all(self->widget);
 }
 
+static void
+server_context_service_real_show_keyboard (ServerContextService *self)
+{
+    if (!self->window) {
+        make_window (self);
+    }
+    if (!self->widget) {
+        make_widget (self);
+    }
+    self->visible = TRUE;
+    gtk_widget_show (GTK_WIDGET(self->window));
+}
+
+static gboolean
+show_keyboard_source_func(ServerContextService *context)
+{
+    server_context_service_real_show_keyboard(context);
+    return G_SOURCE_REMOVE;
+}
+
+static void
+server_context_service_real_hide_keyboard (ServerContextService *self)
+{
+    gtk_widget_hide (GTK_WIDGET(self->window));
+    self->visible = FALSE;
+}
+
+static gboolean
+hide_keyboard_source_func(ServerContextService *context)
+{
+    server_context_service_real_hide_keyboard(context);
+    return G_SOURCE_REMOVE;
+}
+
 static gboolean
 on_hide (ServerContextService *self)
 {
-    gtk_widget_hide (GTK_WIDGET(self->window));
+    server_context_service_real_hide_keyboard(self);
     self->hiding = 0;
 
     return G_SOURCE_REMOVE;
 }
 
 static void
-server_context_service_real_show_keyboard (ServerContextService *self)
-{
-    if (self->hiding) {
-	    g_source_remove (self->hiding);
-	    self->hiding = 0;
-    }
-
-    if (!self->window)
-        make_window (self);
-    if (!self->widget)
-        make_widget (self);
-
-    self->visible = TRUE;
-    gtk_widget_show (GTK_WIDGET(self->window));
-}
-
-static void
-server_context_service_real_hide_keyboard (ServerContextService *self)
-{
-    if (!self->hiding)
-        self->hiding = g_timeout_add (200, (GSourceFunc) on_hide, self);
-
-    self->visible = FALSE;
-}
-
-void
 server_context_service_show_keyboard (ServerContextService *self)
 {
     g_return_if_fail (SERVER_IS_CONTEXT_SERVICE(self));
 
-    if (!self->visible) {
-        server_context_service_real_show_keyboard (self);
+    if (self->hiding) {
+        g_source_remove (self->hiding);
+        self->hiding = 0;
     }
+
+    if (!self->visible) {
+        g_idle_add((GSourceFunc)show_keyboard_source_func, self);
+    }
+}
+
+void
+server_context_service_force_show_keyboard (ServerContextService *self)
+{
+    if (!submission_hint_available(self->submission)) {
+        eekboard_context_service_set_hint_purpose(
+            self->state,
+            ZWP_TEXT_INPUT_V3_CONTENT_HINT_NONE,
+            ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NORMAL
+        );
+    }
+    server_context_service_show_keyboard(self);
 }
 
 void
@@ -247,8 +303,31 @@ server_context_service_hide_keyboard (ServerContextService *self)
     g_return_if_fail (SERVER_IS_CONTEXT_SERVICE(self));
 
     if (self->visible) {
-        server_context_service_real_hide_keyboard (self);
+        g_idle_add((GSourceFunc)hide_keyboard_source_func, self);
     }
+}
+
+/// Meant for use by the input-method handler:
+/// the visible keyboard is no longer needed.
+/// The implementation will delay it slightly,
+/// because the release may be due to switching from one text field to another.
+/// In this case, the user doesn't really need the keyboard surface
+/// to disappear completely.
+void
+server_context_service_release_visibility (ServerContextService *self)
+{
+    g_return_if_fail (SERVER_IS_CONTEXT_SERVICE(self));
+
+    if (!self->hiding && self->visible) {
+        self->hiding = g_timeout_add (200, (GSourceFunc) on_hide, self);
+    }
+}
+
+static void
+server_context_service_set_physical_keyboard_present (ServerContextService *self, gboolean physical_keyboard_present)
+{
+    g_return_if_fail (SERVER_IS_CONTEXT_SERVICE (self));
+    squeek_visman_set_keyboard_present(self->vis_manager, physical_keyboard_present);
 }
 
 static void
@@ -263,7 +342,9 @@ server_context_service_set_property (GObject      *object,
     case PROP_VISIBLE:
         self->visible = g_value_get_boolean (value);
         break;
-
+    case PROP_ENABLED:
+        server_context_service_set_physical_keyboard_present (self, !g_value_get_boolean (value));
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
         break;
@@ -319,20 +400,66 @@ server_context_service_class_init (ServerContextServiceClass *klass)
     g_object_class_install_property (gobject_class,
                                      PROP_VISIBLE,
                                      pspec);
+
+    /**
+     * ServerContextServie:keyboard:
+     *
+     * Does the user want the keyboard to show up automatically?
+     */
+    pspec =
+        g_param_spec_boolean ("enabled",
+                              "Enabled",
+                              "Whether the keyboard is enabled",
+                              TRUE,
+                              G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (gobject_class,
+                                     PROP_ENABLED,
+                                     pspec);
 }
 
 static void
-server_context_service_init (ServerContextService *self) {
-    (void)self;
+server_context_service_init (ServerContextService *self) {}
+
+static void
+init (ServerContextService *self) {
+    const char *schema_name = "org.gnome.desktop.a11y.applications";
+    GSettingsSchemaSource *ssrc = g_settings_schema_source_get_default();
+    g_autoptr(GSettingsSchema) schema = NULL;
+
+    if (!ssrc) {
+        g_warning("No gsettings schemas installed.");
+        return;
+    }
+    schema = g_settings_schema_source_lookup(ssrc, schema_name, TRUE);
+    if (schema) {
+        g_autoptr(GSettings) settings = g_settings_new (schema_name);
+        g_settings_bind (settings, "screen-keyboard-enabled",
+                         self, "enabled", G_SETTINGS_BIND_GET);
+    } else {
+        g_warning("Gsettings schema %s is not installed on the system. "
+                  "Enabling by default.", schema_name);
+    }
 }
 
 ServerContextService *
-server_context_service_new (EekboardContextService *self, struct submission *submission, struct squeek_layout_state *layout, struct ui_manager *uiman)
+server_context_service_new (EekboardContextService *self, struct submission *submission, struct squeek_layout_state *layout, struct ui_manager *uiman, struct vis_manager *visman)
 {
     ServerContextService *ui = g_object_new (SERVER_TYPE_CONTEXT_SERVICE, NULL);
     ui->submission = submission;
     ui->state = self;
     ui->layout = layout;
     ui->manager = uiman;
+    ui->vis_manager = visman;
+    init(ui);
     return ui;
 }
+
+void
+server_context_service_update_visible (ServerContextService *self, gboolean visible) {
+    if (visible) {
+        server_context_service_show_keyboard(self);
+    } else {
+        server_context_service_hide_keyboard(self);
+    }
+}
+

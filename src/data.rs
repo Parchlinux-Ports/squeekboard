@@ -18,7 +18,7 @@ use xkbcommon::xkb;
 use ::action;
 use ::keyboard::{
     KeyState, PressType,
-    generate_keymap, generate_keycodes, FormattingError
+    generate_keymaps, generate_keycodes, KeyCode, FormattingError
 };
 use ::layout;
 use ::layout::ArrangementKind;
@@ -97,6 +97,8 @@ impl fmt::Display for DataSource {
     }
 }
 
+type LayoutSource = (ArrangementKind, DataSource);
+
 /// Lists possible sources, with 0 as the most preferred one
 /// Trying order: native lang of the right kind, native base,
 /// fallback lang of the right kind, fallback base
@@ -104,55 +106,76 @@ fn list_layout_sources(
     name: &str,
     kind: ArrangementKind,
     keyboards_path: Option<PathBuf>,
-) -> Vec<(ArrangementKind, DataSource)> {
-    let mut ret = Vec::new();
-    {
-        fn name_with_arrangement(name: String, kind: &ArrangementKind)
-            -> String
-        {
-            match kind {    
-                ArrangementKind::Base => name,
-                ArrangementKind::Wide => name + "_wide",
-            }
-        }
-
-        let mut add_by_name = |name: &str, kind: &ArrangementKind| {
-            if let Some(path) = keyboards_path.clone() {
-                ret.push((
-                    kind.clone(),
-                    DataSource::File(
-                        path.join(name.to_owned()).with_extension("yaml")
-                    )
-                ))
-            }
-            
+) -> Vec<LayoutSource> {
+    // Just a simplification of often called code.
+    let add_by_name = |
+        mut ret: Vec<LayoutSource>,
+        name: &str,
+        kind: &ArrangementKind,
+    | -> Vec<LayoutSource> {
+        if let Some(path) = keyboards_path.clone() {
             ret.push((
                 kind.clone(),
-                DataSource::Resource(name.into())
-            ));
-        };
+                DataSource::File(
+                    path.join(name.to_owned()).with_extension("yaml")
+                )
+            ))
+        }
 
-        match &kind {
-            ArrangementKind::Base => {},
+        ret.push((
+            kind.clone(),
+            DataSource::Resource(name.into())
+        ));
+        ret
+    };
+
+    // Another grouping.
+    let add_by_kind = |ret, name: &str, kind| {
+        let ret = match kind {
+            &ArrangementKind::Base => ret,
             kind => add_by_name(
-                &name_with_arrangement(name.into(), &kind),
-                &kind,
+                ret,
+                &name_with_arrangement(name.into(), kind),
+                kind,
             ),
         };
 
-        add_by_name(name, &ArrangementKind::Base);
+        add_by_name(ret, name, &ArrangementKind::Base)
+    };
 
-        match &kind {
-            ArrangementKind::Base => {},
-            kind => add_by_name(
-                &name_with_arrangement(FALLBACK_LAYOUT_NAME.into(), &kind),
-                &kind,
-            ),
-        };
-
-        add_by_name(FALLBACK_LAYOUT_NAME, &ArrangementKind::Base);
+    fn name_with_arrangement(name: String, kind: &ArrangementKind) -> String {
+        match kind {    
+            ArrangementKind::Base => name,
+            ArrangementKind::Wide => name + "_wide",
+        }
     }
-    ret
+
+    let ret = Vec::new();
+
+    // Name as given takes priority.
+    let ret = add_by_kind(ret, name, &kind);
+
+    // Then try non-alternative name if applicable (`us` for `us+colemak`).
+    let ret = {
+        let mut parts = name.splitn(2, '+');
+        match parts.next() {
+            Some(base) => {
+                // The name is already equal to base, so it was already added.
+                if base == name { ret }
+                else {
+                    add_by_kind(ret, base, &kind)
+                }
+            },
+            // The layout's base name starts with a "+". Weird but OK.
+            None => {
+                log_print!(logging::Level::Surprise, "Base layout name is empty: {}", name);
+                ret
+            }
+        }
+    };
+
+    // No other choices left, so give anything.
+    add_by_kind(ret, FALLBACK_LAYOUT_NAME.into(), &kind)
 }
 
 fn load_layout_data(source: DataSource)
@@ -382,56 +405,45 @@ impl Layout {
                 )
             )}).collect();
 
-        let keymap: HashMap<String, u32> = generate_keycodes(
-            button_actions.iter()
-                .filter_map(|(_name, action)| {
-                    match action {
-                        ::action::Action::Submit {
-                            text: _, keys,
-                        } => Some(keys),
-                        _ => None,
-                    }
-                })
-                .flatten()
-                .map(|named_keysym| named_keysym.0.as_str())
+        let symbolmap: HashMap<String, KeyCode> = generate_keycodes(
+            extract_symbol_names(&button_actions)
         );
-
-        let button_states = button_actions.into_iter().map(|(name, action)| {
-            let keycodes = match &action {
-                ::action::Action::Submit { text: _, keys } => {
-                    keys.iter().map(|named_keycode| {
-                        *keymap.get(named_keycode.0.as_str())
-                            .expect(
-                                format!(
-                                    "keycode {} in key {} missing from keymap",
-                                    named_keycode.0,
-                                    name
-                                ).as_str()
-                            )
-                    }).collect()
-                },
-                action::Action::Erase => vec![
-                    *keymap.get("BackSpace")
-                        .expect(&format!("BackSpace missing from keymap")),
-                ],
-                _ => Vec::new(),
-            };
-            (
-                name.into(),
-                KeyState {
-                    pressed: PressType::Released,
-                    keycodes,
-                    action,
-                }
-            )
-        });
 
         let button_states = HashMap::<String, KeyState>::from_iter(
-            button_states
+            button_actions.into_iter().map(|(name, action)| {
+                let keycodes = match &action {
+                    ::action::Action::Submit { text: _, keys } => {
+                        keys.iter().map(|named_keysym| {
+                            symbolmap.get(named_keysym.0.as_str())
+                                .expect(
+                                    format!(
+                                        "keysym {} in key {} missing from symbol map",
+                                        named_keysym.0,
+                                        name
+                                    ).as_str()
+                                )
+                                .clone()
+                        }).collect()
+                    },
+                    action::Action::Erase => vec![
+                        symbolmap.get("BackSpace")
+                            .expect(&format!("BackSpace missing from symbol map"))
+                            .clone(),
+                    ],
+                    _ => Vec::new(),
+                };
+                (
+                    name.into(),
+                    KeyState {
+                        pressed: PressType::Released,
+                        keycodes,
+                        action,
+                    }
+                )
+            })
         );
 
-        // TODO: generate from symbols
-        let keymap_str = match generate_keymap(&button_states) {
+        let keymaps = match generate_keymaps(symbolmap) {
             Err(e) => { return (Err(e), warning_handler) },
             Ok(v) => v,
         };
@@ -459,14 +471,14 @@ impl Layout {
                                 &mut warning_handler,
                             ))
                         });
-                    layout::Row {
-                        buttons: add_offsets(
+                    layout::Row::new(
+                        add_offsets(
                             buttons,
                             |button| button.size.width,
                         ).collect()
-                    }
+                    )
                 });
-                let rows = add_offsets(rows, |row| row.get_height())
+                let rows = add_offsets(rows, |row| row.get_size().height)
                     .collect();
                 (
                     name.clone(),
@@ -484,8 +496,8 @@ impl Layout {
                 name,
                 (
                     layout::c::Point {
-                        x: (total_size.width - view.get_width()) / 2.0,
-                        y: (total_size.height - view.get_height()) / 2.0,
+                        x: (total_size.width - view.get_size().width) / 2.0,
+                        y: (total_size.height - view.get_size().height) / 2.0,
                     },
                     view,
                 ),
@@ -495,10 +507,10 @@ impl Layout {
         (
             Ok(::layout::LayoutData {
                 views: views,
-                keymap_str: {
+                keymaps: keymaps.into_iter().map(|keymap_str|
                     CString::new(keymap_str)
                         .expect("Invalid keymap string generated")
-                },
+                ).collect(),
                 // FIXME: use a dedicated field
                 margins: layout::Margins {
                     top: self.margins.top,
@@ -734,20 +746,44 @@ fn create_button<H: logging::Handler>(
     }
 }
 
+fn extract_symbol_names<'a>(actions: &'a [(&str, action::Action)])
+    -> impl Iterator<Item=String> + 'a
+{
+    actions.iter()
+        .filter_map(|(_name, act)| {
+            match act {
+                action::Action::Submit {
+                    text: _, keys,
+                } => Some(keys.clone()),
+                action::Action::Erase => Some(vec!(action::KeySym("BackSpace".into()))),
+                _ => None,
+            }
+        })
+        .flatten()
+        .map(|named_keysym| named_keysym.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    use std::error::Error as ErrorTrait;
+
     use ::logging::ProblemPanic;
 
-    const THIS_FILE: &str = file!();
-
     fn path_from_root(file: &'static str) -> PathBuf {
-        PathBuf::from(THIS_FILE)
-            .parent().unwrap()
-            .parent().unwrap()
-            .join(file)
+        let source_dir = env::var("SOURCE_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|e| {
+                if let env::VarError::NotPresent = e {
+                    let this_file = file!();
+                    PathBuf::from(this_file)
+                        .parent().unwrap()
+                        .parent().unwrap()
+                        .into()
+                } else {
+                    panic!("{:?}", e);
+                }
+            });
+        source_dir.join(file)
     }
 
     #[test]
@@ -786,7 +822,8 @@ mod tests {
             Err(e) => {
                 let mut handled = false;
                 if let Error::Yaml(ye) = &e {
-                    handled = ye.description() == "missing field `views`";
+                    handled = ye.to_string()
+                        .starts_with("missing field `views`");
                 };
                 if !handled {
                     println!("Unexpected error {:?}", e);
@@ -804,7 +841,7 @@ mod tests {
             Err(e) => {
                 let mut handled = false;
                 if let Error::Yaml(ye) = &e {
-                    handled = ye.description()
+                    handled = ye.to_string()
                         .starts_with("unknown field `bad_field`");
                 };
                 if !handled {
@@ -824,7 +861,7 @@ mod tests {
         assert_eq!(
             out.views["base"].1
                 .get_rows()[0].1
-                .buttons[0].1
+                .get_buttons()[0].1
                 .label,
             ::layout::Label::Text(CString::new("test").unwrap())
         );
@@ -839,7 +876,7 @@ mod tests {
         assert_eq!(
             out.views["base"].1
                 .get_rows()[0].1
-                .buttons[0].1
+                .get_buttons()[0].1
                 .label,
             ::layout::Label::Text(CString::new("test").unwrap())
         );
@@ -855,10 +892,27 @@ mod tests {
         assert_eq!(
             out.views["base"].1
                 .get_rows()[0].1
-                .buttons[0].1
+                .get_buttons()[0].1
                 .state.borrow()
                 .keycodes.len(),
             2
+        );
+    }
+
+    /// Test if erase yields a useable keycode
+    #[test]
+    fn test_layout_erase() {
+        let out = Layout::from_file(path_from_root("tests/layout_erase.yaml"))
+            .unwrap()
+            .build(ProblemPanic).0
+            .unwrap();
+        assert_eq!(
+            out.views["base"].1
+                .get_rows()[0].1
+                .get_buttons()[0].1
+                .state.borrow()
+                .keycodes.len(),
+            1
         );
     }
 
@@ -886,7 +940,26 @@ mod tests {
             )
         );
     }
+
+    /// If layout contains a "+", it should reach for what's in front of it too.
+    #[test]
+    fn fallbacks_order_base() {
+        let sources = list_layout_sources("nb+aliens", ArrangementKind::Base, None);
+
+        assert_eq!(
+            sources,
+            vec!(
+                (ArrangementKind::Base, DataSource::Resource("nb+aliens".into())),
+                (ArrangementKind::Base, DataSource::Resource("nb".into())),
+                (
+                    ArrangementKind::Base,
+                    DataSource::Resource(FALLBACK_LAYOUT_NAME.into())
+                ),
+            )
+        );
+    }
     
+
     #[test]
     fn unicode_keysym() {
         let keysym = xkb::keysym_from_name(
@@ -939,4 +1012,35 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn test_extract_symbols() {
+        let actions = [(
+            "ac",
+            action::Action::Submit {
+                text: None,
+                keys: vec![
+                    action::KeySym("a".into()),
+                    action::KeySym("c".into()),
+                ],
+            },
+        )];
+        assert_eq!(
+            extract_symbol_names(&actions[..]).collect::<Vec<_>>(),
+            vec!["a", "c"],
+        );
+    }
+
+    #[test]
+    fn test_extract_symbols_erase() {
+        let actions = [(
+            "Erase",
+            action::Action::Erase,
+        )];
+        assert_eq!(
+            extract_symbol_names(&actions[..]).collect::<Vec<_>>(),
+            vec!["BackSpace"],
+        );
+    }
+
 }
