@@ -1,4 +1,4 @@
-squeekboard (1.12.0pureos0) byzantium; urgency=medium
+squeekboard (1.12.0-1pureos1) byzantium; urgency=medium
 
   [ Dorota Czaplejewicz ]
   * debian: New Byzantium release
