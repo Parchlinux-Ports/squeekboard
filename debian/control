@@ -31,6 +31,8 @@ Build-Depends:
  wayland-protocols (>= 1.14),
 Standards-Version: 4.1.3
 Homepage: https://source.puri.sm/Librem5/squeekboard
+Vcs-Browser: https://source.puri.sm/pureos/squeekboard
+Vcs-Git: https://source.puri.sm/pureos/squeekboard.git
 
 Package: squeekboard
 Architecture: linux-any
