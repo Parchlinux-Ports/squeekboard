@@ -41,6 +41,7 @@ Depends:
  ${misc:Depends},
 Breaks:
  librem5-base (<< 24),
+ phosh (<= 0.10),
 Description: On-screen keyboard for Wayland
  Virtual keyboard supporting Wayland, built primarily for the Librem 5 phone.
 
