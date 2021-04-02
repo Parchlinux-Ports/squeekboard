@@ -1,0 +1,15 @@
+[Unit]
+Description=Squeekboard - a Wayland virtual keyboard
+
+# Don't stop restarting the program
+StartLimitIntervalSec=0
+
+[Service]
+Environment="GTK_THEME=Adwaita:dark"
+ExecStart=/usr/bin/squeekboard
+
+Restart=on-failure
+RestartSec=3s
+
+[Install]
+WantedBy=default.target
