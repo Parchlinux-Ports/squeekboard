@@ -1,6 +1,6 @@
 [Unit]
 Description=Squeekboard - a Wayland virtual keyboard
-
+PartOf=graphical-session.target
 # Don't stop restarting the program
 StartLimitIntervalSec=0
 
@@ -12,4 +12,5 @@ Restart=on-failure
 RestartSec=3s
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target
+
