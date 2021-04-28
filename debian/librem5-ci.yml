@@ -1,0 +1,29 @@
+include:
+ - 'https://source.puri.sm/Librem5/librem5-ci/raw/master/librem5-pipeline-definitions.yml'
+ - 'https://source.puri.sm/Librem5/librem5-ci/raw/master/librem5-pipeline-byzantium-jobs.yml'
+
+stages:
+ - package
+ - test-package
+
+.tags: &tags
+  tags:
+    - librem5
+
+check_release:
+  <<: *tags
+  stage: test-package
+  only:
+    refs:
+      - pureos/byzantium
+  script:
+    - apt-get -y install git python3
+    - (head -n 1 ./debian/changelog && git tag) | ./debian/check_release.py
+
+# check-tarball relies on the contents of other branches,
+# which are irrelevant for MRs. It's similar to checking tags in this way.
+check-tarball:
+  extends: .l5-check-tarball
+  only:
+    refs:
+        - pureos/byzantium
