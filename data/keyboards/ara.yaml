@@ -9,9 +9,14 @@ outlines:
 
 views:
     base:
-        - "ض ص ث ق ف غ ع ه خ ح ج"
+        - "ذ ض ص ث ق ف غ ع خ ح ج"
         - "ش س ي ب ل ا ت ن م ك ط"
-        - "ذ ء ؤ ر ى ة و ز ظ د BackSpace"
+        - "Shift_L ء ؤ ر ة و ز ظ د BackSpace"
+        - "show_numbers preferences         space        . Return"
+    extra:
+        - "ذ ض ص ث ق ف غ ع خ ح ج"
+        - "ش ئ ى آ إ أ لإ لا لأ لآ ط"
+        - "Shift_L ء ؤ ر ة و ز ظ د BackSpace"
         - "show_numbers preferences         space        . Return"
     numbers:
         - "1 2 3 4 5 6 7 8 9 0"
@@ -25,8 +30,15 @@ views:
         - "show_letters preferences         space        . Return"
 
 buttons:
+    Shift_L:
+        action:
+            locking:
+                lock_view: "extra"
+                unlock_view: "base"
+        outline: "altline"
+        icon: "key-shift"
     BackSpace:
-        outline: "special"
+        outline: "altline"
         icon: "edit-clear-symbolic"
         action: "erase"
     preferences:
@@ -42,7 +54,7 @@ buttons:
         action:
             set_view: "base"
         outline: "altline"
-        label: "abc"
+        label: "حرف"
     show_symbols:
         action:
             set_view: "symbols"
