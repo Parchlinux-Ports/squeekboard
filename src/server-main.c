@@ -83,7 +83,6 @@ on_name_lost (GDBusConnection *connection,
     (void)name;
     (void)user_data;
     g_error("DBus unavailable, unclear how to continue.");
-    exit (1);
 }
 
 // Wayland
@@ -264,7 +263,6 @@ main (int argc, char **argv)
 
     if (display == NULL) {
         g_error ("Failed to get display: %m\n");
-        exit(1);
     }
 
 
@@ -277,15 +275,12 @@ main (int argc, char **argv)
 
     if (!instance.wayland.seat) {
         g_error("No seat Wayland global available.");
-        exit(1);
     }
     if (!instance.wayland.virtual_keyboard_manager) {
         g_error("No virtual keyboard manager Wayland global available.");
-        exit(1);
     }
     if (!instance.wayland.layer_shell) {
         g_error("No layer shell global available.");
-        exit(1);
     }
 
     if (!instance.wayland.input_method_manager) {
@@ -384,7 +379,6 @@ main (int argc, char **argv)
                 vis_manager);
     if (!ui_context) {
         g_error("Could not initialize GUI");
-        exit(1);
     }
     instance.ui_context = ui_context;
     squeek_visman_set_ui(vis_manager, instance.ui_context);
