@@ -1,3 +1,18 @@
+squeekboard (1.17.1-1) experimental; urgency=medium
+
+  [ Dorota Czaplejewicz ]
+  * build: Replace missing crates.io dependency with Purism-hosted one
+  * ci: Allow failure on sid
+  * panel: Use scaling to set height
+
+  [ William Wold ]
+  * Do not reset pending state on zwp_input_method_v2.done
+
+  [ Arnaud Ferraris ]
+  * state: fix "wide mode" detection in portrait orientation
+
+ -- Dorota Czaplejewicz <dorota.czaplejewicz@puri.sm>  Tue, 05 Apr 2022 13:32:53 +0000
+
 squeekboard (1.17.0-1) experimental; urgency=medium
 
   [ Dorota Czaplejewicz ]

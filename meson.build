@@ -1,7 +1,7 @@
 project(
     'squeekboard',
     'c', 'rust',
-    version: '1.17.0',
+    version: '1.17.1',
     license: 'GPLv3',
     meson_version: '>=0.51.0',
     default_options: [
@@ -96,19 +96,23 @@ cargo_toml_base = configure_file(
     configuration: path_data,
 )
 
-
-cargo_deps = files('Cargo.deps')
+cargo_patch = []
 
 if get_option('newer') == true
     cargo_build_flags += ['--features', 'glib_v0_14']
     cargo_deps = files('Cargo.deps.newer')
+else
+    cargo_deps = files('Cargo.deps')
+    if get_option('online') == true
+        cargo_patch = [files('Cargo.deps.online')]
+    endif
 endif
-    
+
 cat = find_program('cat')
 cargo_toml = custom_target(
     'Cargo.toml',
     output: 'Cargo.toml',
-    command: [cat, cargo_toml_base, cargo_deps],
+    command: [cat, cargo_toml_base, cargo_deps] + cargo_patch,
     capture: true,
 )
 
