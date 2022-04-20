@@ -9,14 +9,12 @@ So at least I will try to start writing a short how-to here and edit this post a
 
 ## Creating a new layout
 
-Creating a layout is easy. You don't need to recompile things, just edit and test. It's easiest to start with an existing layout.
+Creating a layout is easy. You don't need to recompile things, just edit and test. It's easiest to start with an existing layout, with the [layouts](layouts.md) documentation in hand.
 
 ### Get one of the existing keyboard layouts
 
 * You can get one of the keyboards from the squeekboard git repository : [https://source.puri.sm/Librem5/squeekboard](https://source.puri.sm/Librem5/squeekboard)
 * The keyboard layouts are located in the subdirectory [`data/keyboards/`](https://source.puri.sm/Librem5/squeekboard/-/tree/master/data/keyboards) in the `.yaml` files
-* Take a look and try to understand them :slight_smile:
-
 
 ### Creating the keyboard layout
 
