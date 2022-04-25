@@ -1,3 +1,69 @@
+squeekboard (1.18.0-1) experimental; urgency=medium
+
+  [ Hugo Carvalho ]
+  * Add Portuguese translation
+
+  [ Мирослав Николић ]
+  * Add Serbian translation
+
+  [ William Wold ]
+  * Do not reset pending state on zwp_input_method_v2.done
+
+  [ Balázs Úr ]
+  * Add Hungarian translation
+
+  [ Emin Tufan Çetin ]
+  * Add Turkish translation
+
+  [ Piotr Drąg ]
+  * Add Polish translation
+
+  [ Pablo Correa Gómez ]
+  * Add Spanish translation
+
+  [ Vittorio Monti ]
+  * Add Italian translation
+
+  [ Dorota Czaplejewicz ]
+  * build: Replace missing crates.io dependency with Purism-hosted one
+  * ci: Allow failure on sid
+  * build: Update clap on newer Debian
+  * panel: Use scaling to set height
+  * layouts: Add Greek Polytonic
+  * debug: Add dbus interface to control debug prints
+  * output: Store physical size
+  * state: Derive panel size from physical click target size
+  * Clean up size types
+  * state: Add sizing unit test
+  * layouts: Register gr_wide
+  * CI: Build Rust code reference
+  * CI: Add gitlab pages deployment
+  * panel: Split away panel handling
+  * cargo: Add zbus to newer Debian
+  * docs: Update location
+  * docs: Link to reference
+  * docs: Make index more logical
+  * Update Cargo lock
+
+  [ Sotiris Papadopoulos ]
+  * Update gr.yaml to take advantage of more space per symbol. Creation of a wide variant...
+
+  [ Arnaud Ferraris ]
+  * state: fix "wide mode" detection in portrait orientation
+  * layout: allow stretching the layout by a small amount
+  * layout: fix build on i386
+
+  [ Sungjoon Moon ]
+  * Add Korean translation
+
+  [ Quentin PAGÈS ]
+  * Add Occitan translation
+
+  [ Zurab Kargareteli ]
+  * Add Georgian translation
+
+ -- Dorota Czaplejewicz <dorota.czaplejewicz@puri.sm>  Mon, 25 Apr 2022 13:12:36 +0000
+
 squeekboard (1.17.0-1) experimental; urgency=medium
 
   [ Dorota Czaplejewicz ]
