@@ -11,9 +11,7 @@ Layouts
 
 Squeekboard allows user-provided keyboard layouts. They can be created without recompiling the keyboard code. The [tutorial](tutorial.md) explains the process in detail.
 
-Layouts are created using a text-based format, based on YAML.
-
-TODO: Provide a description of the format.
+Layouts are created using a [text-based format, based on YAML](layouts.md).
 
 ### Views
 
