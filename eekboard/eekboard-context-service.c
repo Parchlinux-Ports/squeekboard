@@ -56,6 +56,8 @@ static guint signals[LAST_SIGNAL] = { 0, };
 struct _EekboardContextService {
     GObject parent;
     struct squeek_layout_state *layout; // Unowned
+    // FIXME: replaces layout
+    struct squeek_state_manager *state_manager; // shared reference
 
     LevelKeyboard *keyboard; // currently used keyboard
     GSettings *settings; // Owned reference
@@ -168,6 +170,8 @@ static void eekboard_context_service_update_settings_layout(EekboardContextServi
     g_autofree gchar *keyboard_type = NULL;
     settings_get_layout(context->settings,
                         &keyboard_type, &keyboard_layout);
+
+    squeek_state_send_layout_set(context->state_manager, keyboard_layout, keyboard_type, gdk_event_get_time(NULL));
 
     if (g_strcmp0(context->layout->layout_name, keyboard_layout) != 0 || context->layout->overlay_name) {
         g_free(context->layout->overlay_name);
@@ -325,10 +329,11 @@ eekboard_context_service_get_overlay(EekboardContextService *context) {
     return context->layout->overlay_name;
 }
 
-EekboardContextService *eekboard_context_service_new(struct squeek_layout_state *state)
+EekboardContextService *eekboard_context_service_new(struct squeek_state_manager *state_manager, struct squeek_layout_state *state)
 {
     EekboardContextService *context = g_object_new (EEKBOARD_TYPE_CONTEXT_SERVICE, NULL);
     context->layout = state;
+    context->state_manager = state_manager;
     eekboard_context_service_update_settings_layout(context);
     uint32_t time = gdk_event_get_time(NULL);
     eekboard_context_service_use_layout(context, context->layout, time);

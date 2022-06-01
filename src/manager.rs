@@ -1,5 +1,5 @@
 /*! Procedures relating to the management of the switching of layouts */
-use ::util;
+use crate::util;
 
 pub mod c {
     use std::os::raw::{c_char, c_void};

@@ -39,7 +39,9 @@ type UISender = glib::Sender<Commands>;
 /// It sends outcomes to the glib main loop using a channel.
 /// The outcomes are applied by the UI end of the channel in the `main` module.
 // This could still be reasonably tested,
-// by creating a glib::Sender and checking what messages it receives.
+/// by creating a glib::Sender and checking what messages it receives.
+// This can/should be abstracted over Event and Commands,
+// so that the C call-ins can be thrown away from here and defined near events.
 #[derive(Clone)]
 pub struct Threaded {
     thread: Sender,
@@ -108,8 +110,11 @@ mod c {
     use super::*;
 
     use crate::state::Presence;
+    use crate::state::LayoutChoice;
     use crate::state::visibility;
+    use crate::util;
     use crate::util::c::Wrapped;
+    use std::os::raw::c_char;
     
     #[no_mangle]
     pub extern "C"
@@ -138,6 +143,30 @@ mod c {
             if present == 0 { Presence::Missing }
             else { Presence::Present };
         sender.send(Event::PhysicalKeyboard(state))
+            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
+    }
+    
+    #[no_mangle]
+    pub extern "C"
+    fn squeek_state_send_layout_set(
+        sender: Wrapped<Threaded>,
+        name: *const c_char,
+        source: *const c_char,
+        // TODO: use when synthetic events are needed
+        _timestamp: u32,
+    ) {
+        let sender = sender.clone_ref();
+        let sender = sender.borrow();
+        let string_or_empty = |v| String::from(
+            util::c::as_str(v)
+            .unwrap_or(Some(""))
+            .unwrap_or("")
+        );
+        sender
+            .send(Event::LayoutChoice(LayoutChoice {
+                name: string_or_empty(&name),
+                source: string_or_empty(&source).into(),
+            }))
             .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
     }
 }

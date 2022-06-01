@@ -1,4 +1,4 @@
-/* Copyright (C) 2021 Purism SPC
+/* Copyright (C) 2021,2022 Purism SPC
  * SPDX-License-Identifier: GPL-3.0+
  */
 
@@ -37,6 +37,29 @@ pub enum InputMethod {
     InactiveSince(Instant),
 }
 
+#[derive(Clone, Debug)]
+pub enum LayoutSource {
+    Xkb,
+    Other(String),
+}
+
+impl From<String> for LayoutSource {
+    fn from(v: String) -> Self {
+        if v.as_str() == "xkb" {
+            LayoutSource::Xkb
+        } else {
+           LayoutSource::Other(v)
+        }
+    }
+}
+
+/// The user's preferred layout
+#[derive(Clone, Debug)]
+pub struct LayoutChoice {
+    pub name: String,
+    pub source: LayoutSource,
+}
+
 /// Incoming events.
 /// This contains events that cause a change to the internal state.
 #[derive(Clone, Debug)]
@@ -45,6 +68,7 @@ pub enum Event {
     Visibility(visibility::Event),
     PhysicalKeyboard(Presence),
     Output(outputs::Event),
+    LayoutChoice(LayoutChoice),
     Debug(debug::Event),
     /// Event triggered because a moment in time passed.
     /// Use to animate state transitions.
@@ -257,7 +281,9 @@ impl Application {
                     im: InputMethod::InactiveSince(old),
                     ..self
                 },
-            }
+            },
+            
+            Event::LayoutChoice(LayoutChoice { name, source }) => self,
         };
 
         if state.debug_mode_enabled {

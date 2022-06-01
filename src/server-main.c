@@ -400,7 +400,7 @@ main (int argc, char **argv)
     // Also initializes wayland
     struct rsobjects rsobjects = squeek_init();
 
-    instance.settings_context = eekboard_context_service_new(&instance.layout_choice);
+    instance.settings_context = eekboard_context_service_new(rsobjects.state_manager, &instance.layout_choice);
 
     // set up dbus
 

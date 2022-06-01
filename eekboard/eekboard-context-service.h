@@ -24,6 +24,7 @@
 
 #include "src/submission.h"
 #include "src/layout.h"
+#include "src/main.h"
 
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 #include "text-input-unstable-v3-client-protocol.h"
@@ -37,7 +38,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE(EekboardContextService, eekboard_context_service, EEKBOARD, CONTEXT_SERVICE, GObject)
 
-EekboardContextService *eekboard_context_service_new(struct squeek_layout_state *state);
+EekboardContextService *eekboard_context_service_new(struct squeek_state_manager *state_manager, struct squeek_layout_state *state);
 void eekboard_context_service_set_submission(EekboardContextService *context, struct submission *submission);
 void          eekboard_context_service_destroy (EekboardContextService *context);
 LevelKeyboard *eekboard_context_service_get_keyboard(EekboardContextService *context);

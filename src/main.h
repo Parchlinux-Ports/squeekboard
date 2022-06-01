@@ -33,3 +33,4 @@ void squeek_state_send_force_visible(struct squeek_state_manager *state);
 void squeek_state_send_force_hidden(struct squeek_state_manager *state);
 
 void squeek_state_send_keyboard_present(struct squeek_state_manager *state, uint32_t keyboard_present);
+void squeek_state_send_layout_set(struct squeek_state_manager *state, char *name, char *layout, uint32_t timestamp);
