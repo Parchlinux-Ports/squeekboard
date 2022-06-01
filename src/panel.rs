@@ -36,7 +36,6 @@ use crate::util::c::Wrapped;
 pub mod c {
     use super::*;
     use glib;
-    use gtk::Continue;
     use std::os::raw::c_void;
 
     use crate::outputs::c::WlOutput;
@@ -67,7 +66,7 @@ pub mod c {
         glib::idle_add_local(move || {
             let panel = panel.clone_ref();
             panel.borrow_mut().set_configured(Size{width, height});
-            Continue(false)
+            glib::Continue(false)
         });
     }
 }
