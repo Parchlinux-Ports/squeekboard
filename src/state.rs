@@ -113,6 +113,7 @@ pub mod visibility {
 pub struct Outcome {
     pub visibility: animation::Outcome,
     pub im: InputMethod,
+    pub layout: LayoutChoice,
 }
 
 impl Outcome {
@@ -126,11 +127,13 @@ impl Outcome {
             Outcome {
                 visibility: animation::Outcome::Visible{..},
                 im: InputMethod::Active(hints),
+                ..
             } => Some(hints.clone()),
             
             Outcome {
                 visibility: animation::Outcome::Visible{..},
                 im: InputMethod::InactiveSince(_),
+                ..
             } => Some(InputMethodDetails {
                 hint: ContentHint::NONE,
                 purpose: ContentPurpose::Normal,
@@ -180,6 +183,11 @@ pub struct Application {
     /// but not sure about being allowed on non-touch displays.
     pub preferred_output: Option<OutputId>,
     pub outputs: HashMap<OutputId, OutputState>,
+    /// We presume that the system always has some preference,
+    /// even though we receive the preference after init,
+    /// and we might not receive one at all (gsettings missing).
+    /// Then a default is used.
+    pub layout_choice: LayoutChoice,
 }
 
 impl Application {
@@ -197,6 +205,10 @@ impl Application {
             debug_mode_enabled: false,
             preferred_output: None,
             outputs: Default::default(),
+            layout_choice: LayoutChoice {
+                name: String::from("us"),
+                source: LayoutSource::Xkb,
+            },
         }
     }
 
@@ -283,7 +295,10 @@ impl Application {
                 },
             },
             
-            Event::LayoutChoice(LayoutChoice { name, source }) => self,
+            Event::LayoutChoice(choice) => Self {
+                layout_choice: choice,
+                ..self
+            },
         };
 
         if state.debug_mode_enabled {
@@ -397,6 +412,7 @@ Outcome:
                 }
             },
             im: self.im.clone(),
+            layout: self.layout_choice.clone(),
         }
     }
 
