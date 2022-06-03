@@ -12,6 +12,7 @@ use std::convert::TryFrom;
 use super::{ Error, LoadError };
 use super::parsing;
 
+use crate::layout;
 use ::layout::ArrangementKind;
 use ::logging;
 use ::util::c::as_str;
@@ -33,8 +34,10 @@ pub mod c {
         name: *const c_char,    // name of the keyboard
         type_: u32,             // type like Wide
         variant: u32,          // purpose variant like numeric, terminal...
-        overlay: *const c_char, // the overlay (looking for "terminal")
-    ) -> *mut ::layout::Layout {
+        // Overlay forces a variant other than specified
+        // (typically "terminal", "emoji")
+        overlay: *const c_char,
+    ) -> *mut layout::Layout {
         let type_ = match type_ {
             0 => ArrangementKind::Base,
             1 => ArrangementKind::Wide,
@@ -60,8 +63,10 @@ pub mod c {
             other => Some(other),
         };
 
+        dbg!(&name, type_, variant, overlay_str);
+        
         let (kind, layout) = load_layout_data_with_fallback(&name, type_, variant, overlay_str);
-        let layout = ::layout::Layout::new(layout, kind, variant);
+        let layout = layout::Layout::new(layout, kind, variant);
         Box::into_raw(Box::new(layout))
     }
 }
@@ -265,7 +270,7 @@ fn load_layout_data_with_fallback(
     kind: ArrangementKind,
     purpose: ContentPurpose,
     overlay: Option<&str>,
-) -> (ArrangementKind, ::layout::LayoutData) {
+) -> (ArrangementKind, layout::LayoutData) {
 
     // Build the path to the right keyboard layout subdirectory
     let path = env::var_os("SQUEEKBOARD_KEYBOARDSDIR")
