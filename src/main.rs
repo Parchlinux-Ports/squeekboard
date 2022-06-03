@@ -19,6 +19,7 @@ mod c {
     use crate::event_loop::driver;
     use crate::imservice::IMService;
     use crate::imservice::c::InputMethod;
+    use crate::layout;
     use crate::outputs::Outputs;
     use crate::state;
     use crate::submission::Submission;
@@ -79,6 +80,8 @@ mod c {
         #[allow(improper_ctypes)]
         fn init_wayland(wayland: *mut Wayland);
         fn eekboard_context_service_set_hint_purpose(service: HintManager, hint: u32, purpose: u32);
+        #[allow(improper_ctypes)]
+        fn eekboard_context_service_set_layout(service: HintManager, layout: *const layout::Layout, timestamp: u32);
         // This should probably only get called from the gtk main loop,
         // given that dbus handler is using glib.
         fn dbus_handler_set_visible(dbus: *const DBusHandler, visible: u8);
@@ -176,6 +179,7 @@ mod c {
         }
         
         if let Some(commands::SetLayout { description }) = msg.layout_selection {
+            //loading::
             dbg!(description);
         }
     }

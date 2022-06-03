@@ -305,6 +305,17 @@ fn load_layout_data_with_fallback(
     panic!("No useful layout found!");
 }
 
+pub fn load_layout(
+    name: String,
+    kind: ArrangementKind,
+    variant: ContentPurpose,
+    overlay: Option<String>,
+) -> layout::Layout {
+    let overlay = overlay.as_ref().map(String::as_str);
+    let (found_kind, layout)
+        = load_layout_data_with_fallback(&name, kind, variant, overlay);
+    layout::Layout::new(layout, found_kind, variant)
+}
 
 #[cfg(test)]
 mod tests {

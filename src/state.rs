@@ -462,6 +462,10 @@ Outcome:
                             kind: arrangement,
                             name: layout_name,
                             overlay_name: overlay,
+                            purpose: match self.im {
+                                InputMethod::Active(InputMethodDetails { purpose, .. }) => purpose,
+                                InputMethod::InactiveSince(_) => ContentPurpose::Normal,
+                            },
                         }
                     };
 

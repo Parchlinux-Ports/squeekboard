@@ -226,7 +226,7 @@ bitflags!{
 /// use rs::imservice::ContentPurpose;
 /// assert_eq!(ContentPurpose::Alpha as u32, 1);
 /// ```
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ContentPurpose {
     Normal = 0,
     Alpha = 1,

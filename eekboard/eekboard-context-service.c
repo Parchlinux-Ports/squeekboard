@@ -128,6 +128,8 @@ settings_get_layout(GSettings *settings, char **type, char **layout)
     g_variant_unref(inputs);
 }
 
+void eekboard_context_service_set_layout(EekboardContextService *context, struct squeek_layout *layout, uint32_t timestamp);
+
 void
 eekboard_context_service_use_layout(EekboardContextService *context, struct squeek_layout_state *state, uint32_t timestamp) {
     gchar *layout_name = state->layout_name;
@@ -146,6 +148,10 @@ eekboard_context_service_use_layout(EekboardContextService *context, struct sque
     
     // generic part follows
     struct squeek_layout *layout = squeek_load_layout(layout_name, state->arrangement, state->purpose, overlay_name);
+    eekboard_context_service_set_layout(context, layout, timestamp);
+}
+
+void eekboard_context_service_set_layout(EekboardContextService *context, struct squeek_layout *layout, uint32_t timestamp) {
     LevelKeyboard *keyboard = level_keyboard_new(layout);
     // set as current
     LevelKeyboard *previous_keyboard = context->keyboard;
