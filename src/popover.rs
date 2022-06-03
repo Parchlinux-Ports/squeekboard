@@ -4,11 +4,13 @@ use gio;
 use gtk;
 use std::ffi::CString;
 use std::cmp::Ordering;
-use ::layout::c::{ Bounds, EekGtkKeyboard };
-use ::locale::{ OwnedTranslation, compare_current_locale };
-use ::logging;
-use ::manager;
-use ::resources;
+use crate::layout::c::{ Bounds, EekGtkKeyboard };
+use crate::locale::{ OwnedTranslation, compare_current_locale };
+use crate::logging;
+use crate::manager;
+use crate::receiver;
+use crate::resources;
+use crate::state;
 
 // Traits
 use gio::prelude::ActionMapExt;
@@ -16,7 +18,7 @@ use gio::prelude::SettingsExt;
 use glib::translate::FromGlibPtrNone;
 use glib::variant::ToVariant;
 use gtk::prelude::*;
-use ::logging::Warn;
+use crate::logging::Warn;
 
 mod c {
     use std::os::raw::c_char;
@@ -150,7 +152,7 @@ fn set_layout(kind: String, name: String) {
 
 /// A reference to what the user wants to see
 #[derive(PartialEq, Clone, Debug)]
-enum LayoutId {
+pub enum LayoutId {
     /// Affects the layout in system settings
     System {
         kind: String,
@@ -248,6 +250,7 @@ pub fn show(
     window: EekGtkKeyboard,
     position: Bounds,
     manager: manager::c::Manager,
+    app_state: receiver::State,
 ) {
     unsafe { gtk::set_initialized() };
     let window = unsafe { gtk::Widget::from_glib_none(window.0) };
@@ -356,6 +359,12 @@ pub fn show(
                                 .find(
                                     |choices| state == choices.get_name()
                                 ).unwrap();
+                            app_state
+                                .send(state::Event::OverlayChanged(layout.clone()))
+                                .or_print(
+                                    logging::Problem::Bug,
+                                    &format!("Can't send to state"),
+                                );
                             set_visible_layout(
                                 manager,
                                 layout.clone(),

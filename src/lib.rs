@@ -38,6 +38,7 @@ mod manager;
 mod outputs;
 mod panel;
 mod popover;
+mod receiver;
 mod resources;
 mod state;
 mod style;

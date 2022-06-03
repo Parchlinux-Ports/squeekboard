@@ -450,7 +450,8 @@ main (int argc, char **argv)
 
     instance.panel_manager = panel_manager_new(instance.settings_context,
         rsobjects.submission,
-        &instance.layout_choice);
+        &instance.layout_choice,
+        rsobjects.state_manager);
 
     register_ui_loop_handler(rsobjects.receiver, &instance.panel_manager, instance.settings_context, instance.dbus_handler);
 

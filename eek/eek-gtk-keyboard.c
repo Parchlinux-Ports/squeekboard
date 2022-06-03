@@ -48,6 +48,7 @@ typedef struct _EekGtkKeyboardPrivate
     struct render_geometry render_geometry; // mutable
 
     EekboardContextService *eekboard_context; // unowned reference
+    struct squeek_state_manager *state_manager; // shared reference
     struct submission *submission; // unowned reference
 
     struct squeek_layout_state *layout; // unowned
@@ -158,6 +159,7 @@ on_event_triggered (LfbEvent      *event,
                     GAsyncResult  *res,
                     gpointer      unused)
 {
+    (void)unused;
     g_autoptr (GError) err = NULL;
 
     if (!lfb_event_trigger_feedback_finish (event, res, &err)) {
@@ -188,7 +190,7 @@ static void drag(EekGtkKeyboard *self,
     squeek_layout_drag(eekboard_context_service_get_keyboard(priv->eekboard_context)->layout,
                        priv->submission,
                        x, y, priv->render_geometry.widget_to_layout, time,
-                       priv->eekboard_context, self);
+                       priv->eekboard_context, priv->state_manager, self);
 }
 
 static void release(EekGtkKeyboard *self, guint32 time)
@@ -199,7 +201,7 @@ static void release(EekGtkKeyboard *self, guint32 time)
     }
     squeek_layout_release(eekboard_context_service_get_keyboard(priv->eekboard_context)->layout,
                           priv->submission, priv->render_geometry.widget_to_layout, time,
-                          priv->eekboard_context, self);
+                          priv->eekboard_context, priv->state_manager, self);
 }
 
 static gboolean
@@ -406,13 +408,14 @@ on_notify_keyboard (GObject              *object,
 GtkWidget *
 eek_gtk_keyboard_new (EekboardContextService *eekservice,
                       struct submission *submission,
-                      struct squeek_layout_state *layout)
+                      struct squeek_layout_state *layout, struct squeek_state_manager *state_manager)
 {
     EekGtkKeyboard *ret = EEK_GTK_KEYBOARD(g_object_new (EEK_TYPE_GTK_KEYBOARD, NULL));
     EekGtkKeyboardPrivate *priv = (EekGtkKeyboardPrivate*)eek_gtk_keyboard_get_instance_private (ret);
     priv->eekboard_context = eekservice;
     priv->submission = submission;
     priv->layout = layout;
+    priv->state_manager = state_manager;
     priv->renderer = NULL;
     // This should really be done on initialization.
     // Before the widget is allocated,

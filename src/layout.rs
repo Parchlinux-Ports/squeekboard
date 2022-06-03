@@ -25,31 +25,37 @@ use std::fmt;
 use std::rc::Rc;
 use std::vec::Vec;
 
-use ::action::Action;
-use ::drawing;
-use ::float_ord::FloatOrd;
-use ::keyboard::KeyState;
-use ::logging;
-use ::manager;
-use ::submission::{ Submission, SubmitData, Timestamp };
-use ::util::find_max_double;
+use crate::action::Action;
+use crate::drawing;
+use crate::event_loop::driver::Threaded as AppState;
+use crate::float_ord::FloatOrd;
+use crate::keyboard::KeyState;
+use crate::logging;
+use crate::manager;
+use crate::popover;
+use crate::receiver;
+use crate::submission::{ Submission, SubmitData, Timestamp };
+use crate::util::find_max_double;
 
-use ::imservice::ContentPurpose;
+use crate::imservice::ContentPurpose;
 
 // Traits
 use std::borrow::Borrow;
-use ::logging::Warn;
+use crate::logging::Warn;
 
 /// Gathers stuff defined in C or called by C
 pub mod c {
     use super::*;
-
-    use gtk_sys;
-    use std::os::raw::c_void;
+    
+    use crate::receiver;
     use crate::submission::c::Submission as CSubmission;
 
+    use gtk_sys;
     use std::ops::{ Add, Sub };
-
+    use std::os::raw::c_void;
+    
+    use crate::util::CloneOwned;
+    
     // The following defined in C
     #[repr(transparent)]
     #[derive(Copy, Clone)]
@@ -216,12 +222,15 @@ pub mod c {
             widget_to_layout: Transformation,
             time: u32,
             manager: manager::c::Manager,
+            app_state: receiver::c::State,
             ui_keyboard: EekGtkKeyboard,
         ) {
             let time = Timestamp(time);
             let layout = unsafe { &mut *layout };
             let submission = submission.clone_ref();
             let mut submission = submission.borrow_mut();
+            let app_state = app_state.clone_owned();
+            
             let ui_backend = UIBackend {
                 widget_to_layout,
                 keyboard: ui_keyboard,
@@ -236,7 +245,7 @@ pub mod c {
                     &mut submission,
                     Some(&ui_backend),
                     time,
-                    Some(manager),
+                    Some((manager, app_state.clone())),
                     key,
                 );
             }
@@ -316,12 +325,14 @@ pub mod c {
             widget_to_layout: Transformation,
             time: u32,
             manager: manager::c::Manager,
+            app_state: receiver::c::State,
             ui_keyboard: EekGtkKeyboard,
         ) {
             let time = Timestamp(time);
             let layout = unsafe { &mut *layout };
             let submission = submission.clone_ref();
             let mut submission = submission.borrow_mut();
+            let app_state = app_state.clone_owned();
             let ui_backend = UIBackend {
                 widget_to_layout,
                 keyboard: ui_keyboard,
@@ -352,7 +363,7 @@ pub mod c {
                             &mut submission,
                             Some(&ui_backend),
                             time,
-                            Some(manager),
+                            Some((manager, app_state.clone())),
                             key,
                         );
                     }
@@ -377,7 +388,7 @@ pub mod c {
                         &mut submission,
                         Some(&ui_backend),
                         time,
-                        Some(manager),
+                        Some((manager, app_state.clone())),
                         key,
                     );
                 }
@@ -1035,7 +1046,11 @@ mod seat {
         submission: &mut Submission,
         ui: Option<&UIBackend>,
         time: Timestamp,
-        manager: Option<manager::c::Manager>,
+        // TODO: intermediate measure:
+        // passing state conditionally because it's only used for popover.
+        // Eventually, it should be used for sumitting button events,
+        // and passed always.
+        manager: Option<(manager::c::Manager, receiver::State)>,
         rckey: &Rc<RefCell<KeyState>>,
     ) {
         let key: KeyState = {
@@ -1070,7 +1085,7 @@ mod seat {
             // only show when UI is present
             Action::ShowPreferences => if let Some(ui) = &ui {
                 // only show when layout manager is available
-                if let Some(manager) = manager {
+                if let Some((manager, app_state)) = manager {
                     let view = layout.get_current_view();
                     let places = ::layout::procedures::find_key_places(
                         view, &rckey,
@@ -1085,10 +1100,11 @@ mod seat {
                             width: button.size.width,
                             height: button.size.height,
                         };
-                        ::popover::show(
+                        popover::show(
                             ui.keyboard,
                             ui.widget_to_layout.reverse_bounds(bounds),
                             manager,
+                            app_state,
                         );
                     }
                 }

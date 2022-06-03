@@ -30,6 +30,7 @@
 
 #include "eek/eek-renderer.h"
 #include "eek/eek-types.h"
+#include "src/main.h"
 
 struct submission;
 struct squeek_layout_state;
@@ -48,7 +49,7 @@ struct _EekGtkKeyboardClass
     gpointer pdummy[24];
 };
 
-GtkWidget *eek_gtk_keyboard_new       (EekboardContextService *eekservice, struct submission *submission, struct squeek_layout_state *layout);
+GtkWidget *eek_gtk_keyboard_new       (EekboardContextService *eekservice, struct submission *submission, struct squeek_layout_state *layout, struct squeek_state_manager *state_manager);
 void       eek_gtk_keyboard_emit_feedback (EekGtkKeyboard *self);
 
 G_END_DECLS

@@ -13,6 +13,7 @@ use crate::outputs;
 use crate::outputs::{Millimeter, OutputId, OutputState};
 use crate::panel;
 use crate::panel::PixelSize;
+use crate::popover;
 use crate::util::Rational;
 use std::cmp;
 use std::collections::HashMap;
@@ -53,7 +54,7 @@ impl From<String> for LayoutSource {
     }
 }
 
-/// The user's preferred layout
+/// The user's preferred system layout
 #[derive(Clone, Debug)]
 pub struct LayoutChoice {
     pub name: String,
@@ -69,6 +70,7 @@ pub enum Event {
     PhysicalKeyboard(Presence),
     Output(outputs::Event),
     LayoutChoice(LayoutChoice),
+    OverlayChanged(popover::LayoutId),
     Debug(debug::Event),
     /// Event triggered because a moment in time passed.
     /// Use to animate state transitions.
@@ -188,6 +190,8 @@ pub struct Application {
     /// and we might not receive one at all (gsettings missing).
     /// Then a default is used.
     pub layout_choice: LayoutChoice,
+    /// Manual override of the system layout
+    pub overlay_layout: Option<popover::LayoutId>,
 }
 
 impl Application {
@@ -209,6 +213,7 @@ impl Application {
                 name: String::from("us"),
                 source: LayoutSource::Xkb,
             },
+            overlay_layout: None,
         }
     }
 
@@ -295,8 +300,14 @@ impl Application {
                 },
             },
             
-            Event::LayoutChoice(choice) => Self {
-                layout_choice: choice,
+            Event::LayoutChoice(layout_choice) => Self {
+                layout_choice,
+                overlay_layout: None,
+                ..self
+            },
+            
+            Event::OverlayChanged(overlay_layout) => Self {
+                overlay_layout: Some(overlay_layout),
                 ..self
             },
         };
