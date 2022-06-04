@@ -3,8 +3,10 @@
  */
 
 /*! Glue for the main loop. */
-use crate::panel;
+use crate::animation;
 use crate::debug;
+use crate::data::loading;
+use crate::panel;
 use crate::state;
 use glib::{Continue, MainContext, PRIORITY_DEFAULT, Receiver};
 
@@ -179,8 +181,18 @@ mod c {
         }
         
         if let Some(commands::SetLayout { description }) = msg.layout_selection {
-            //loading::
-            dbg!(description);
+            dbg!(&description);
+            let animation::Contents {
+                name,
+                kind,
+                overlay_name,
+                purpose,
+            } = description;
+            let layout = loading::load_layout(name, kind, purpose, overlay_name);
+            let layout = Box::into_raw(Box::new(layout));
+            unsafe {
+                //eekboard_context_service_set_layout(hint_manager, layout, 0);
+            }
         }
     }
 }
