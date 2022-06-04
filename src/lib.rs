@@ -23,6 +23,7 @@ mod assert_matches;
 mod logging;
 
 mod action;
+mod actors;
 mod animation;
 pub mod data;
 mod debug;
@@ -34,7 +35,6 @@ mod keyboard;
 mod layout;
 mod locale;
 mod main;
-mod manager;
 mod outputs;
 mod panel;
 mod popover;

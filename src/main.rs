@@ -3,11 +3,11 @@
  */
 
 /*! Glue for the main loop. */
+use crate::actors;
 use crate::animation;
 use crate::debug;
 use crate::data::loading;
 use crate::panel;
-use crate::state;
 use glib::{Continue, MainContext, PRIORITY_DEFAULT, Receiver};
 
 
@@ -49,6 +49,7 @@ mod c {
         submission: Wrapped<Submission>,
         /// Not wrapped, because C needs to access this.
         wayland: *mut Wayland,
+        popover: actors::popover::c::Actor,
     }
 
     /// Corresponds to wayland.h::squeek_wayland.
@@ -81,7 +82,6 @@ mod c {
     extern "C" {
         #[allow(improper_ctypes)]
         fn init_wayland(wayland: *mut Wayland);
-        fn eekboard_context_service_set_hint_purpose(service: HintManager, hint: u32, purpose: u32);
         #[allow(improper_ctypes)]
         fn eekboard_context_service_set_layout(service: HintManager, layout: *const layout::Layout, timestamp: u32);
         // This should probably only get called from the gtk main loop,
@@ -121,6 +121,7 @@ mod c {
             state_manager: Wrapped::new(state_manager),
             receiver: Wrapped::new(receiver),
             wayland: Box::into_raw(wayland),
+            popover: Wrapped::new(actors::popover::State::new()),
         }
     }
 
@@ -130,6 +131,7 @@ mod c {
     fn register_ui_loop_handler(
         receiver: Wrapped<Receiver<Commands>>,
         panel_manager: panel::c::PanelManager,
+        popover: actors::popover::c::Actor,
         hint_manager: HintManager,
         dbus_handler: *const DBusHandler,
     ) {
@@ -142,7 +144,13 @@ mod c {
         receiver.attach(
             Some(&ctx),
             move |msg| {
-                main_loop_handle_message(msg, panel_manager.clone(), hint_manager, dbus_handler);
+                main_loop_handle_message(
+                    msg,
+                    panel_manager.clone(),
+                    &popover,
+                    hint_manager,
+                    dbus_handler,
+                );
                 Continue(true)
             },
         );
@@ -157,6 +165,7 @@ mod c {
     fn main_loop_handle_message(
         msg: Commands,
         panel_manager: Wrapped<panel::Manager>,
+        popover: &actors::popover::c::Actor,
         hint_manager: HintManager,
         dbus_handler: *const DBusHandler,
     ) {
@@ -169,29 +178,19 @@ mod c {
                 unsafe { dbus_handler_set_visible(dbus_handler, visible as u8) };
             }
         }
-
-        if let Some(hints) = msg.layout_hint_set {
-            unsafe {
-                eekboard_context_service_set_hint_purpose(
-                    hint_manager,
-                    hints.hint.bits(),
-                    hints.purpose.clone() as u32,
-                )
-            };
-        }
         
         if let Some(commands::SetLayout { description }) = msg.layout_selection {
-            dbg!(&description);
             let animation::Contents {
                 name,
                 kind,
                 overlay_name,
                 purpose,
             } = description;
+            actors::popover::set_overlay(popover, overlay_name.clone());
             let layout = loading::load_layout(name, kind, purpose, overlay_name);
             let layout = Box::into_raw(Box::new(layout));
             unsafe {
-                //eekboard_context_service_set_layout(hint_manager, layout, 0);
+                eekboard_context_service_set_layout(hint_manager, layout, 0);
             }
         }
     }
@@ -210,7 +209,6 @@ pub mod commands {
 #[derive(Clone)]
 pub struct Commands {
     pub panel_visibility: Option<panel::Command>,
-    pub layout_hint_set: Option<state::InputMethodDetails>,
     pub dbus_visible_set: Option<bool>,
     pub layout_selection: Option<commands::SetLayout>,
 }

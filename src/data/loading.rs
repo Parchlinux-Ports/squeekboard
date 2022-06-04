@@ -7,69 +7,16 @@
 use std::env;
 use std::fmt;
 use std::path::PathBuf;
-use std::convert::TryFrom;
 
 use super::{ Error, LoadError };
 use super::parsing;
 
 use crate::layout;
-use ::layout::ArrangementKind;
-use ::logging;
-use ::util::c::as_str;
-use ::xdg;
-use ::imservice::ContentPurpose;
+use crate::layout::ArrangementKind;
+use crate::logging;
+use crate::xdg;
+use crate::imservice::ContentPurpose;
 
-// traits, derives
-use ::logging::Warn;
-
-
-/// Gathers stuff defined in C or called by C
-pub mod c {
-    use super::*;
-    use std::os::raw::c_char;
-
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_load_layout(
-        name: *const c_char,    // name of the keyboard
-        type_: u32,             // type like Wide
-        variant: u32,          // purpose variant like numeric, terminal...
-        // Overlay forces a variant other than specified
-        // (typically "terminal", "emoji")
-        overlay: *const c_char,
-    ) -> *mut layout::Layout {
-        let type_ = match type_ {
-            0 => ArrangementKind::Base,
-            1 => ArrangementKind::Wide,
-            _ => panic!("Bad enum value"),
-        };
-        
-        let name = as_str(&name)
-            .expect("Bad layout name")
-            .expect("Empty layout name");
-
-        let variant = ContentPurpose::try_from(variant)
-                    .or_print(
-                        logging::Problem::Warning,
-                        "Received invalid purpose value",
-                    )
-                    .unwrap_or(ContentPurpose::Normal);
-
-        let overlay_str = as_str(&overlay)
-                .expect("Bad overlay name")
-                .expect("Empty overlay name");
-        let overlay_str = match overlay_str {
-            "" => None,
-            other => Some(other),
-        };
-
-        dbg!(&name, type_, variant, overlay_str);
-        
-        let (kind, layout) = load_layout_data_with_fallback(&name, type_, variant, overlay_str);
-        let layout = layout::Layout::new(layout, kind, variant);
-        Box::into_raw(Box::new(layout))
-    }
-}
 
 const FALLBACK_LAYOUT_NAME: &str = "us";
 

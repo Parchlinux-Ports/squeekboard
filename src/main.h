@@ -9,6 +9,7 @@
 #include "eek/eek-types.h"
 #include "dbus.h"
 #include "panel.h"
+#include "src/popover.h"
 
 
 struct receiver;
@@ -23,9 +24,10 @@ struct rsobjects {
     struct squeek_state_manager *state_manager;
     struct submission *submission;
     struct squeek_wayland *wayland;
+    struct squeek_popover *popover;
 };
 
-void register_ui_loop_handler(struct receiver *receiver, struct panel_manager *panel, EekboardContextService *hint_manager, DBusHandler *dbus_handler);
+void register_ui_loop_handler(struct receiver *receiver, struct panel_manager *panel, struct squeek_popover *popover, EekboardContextService *hint_manager, DBusHandler *dbus_handler);
 
 struct rsobjects squeek_init(void);
 

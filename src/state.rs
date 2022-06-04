@@ -126,27 +126,6 @@ impl Outcome {
     /// The receivers of the commands bear the burden
     /// of checking if the commands end up being no-ops.
     pub fn get_commands_to_reach(&self, new_state: &Self) -> Commands {
-        let layout_hint_set = match new_state {
-            Outcome {
-                panel: animation::Outcome::Visible{..},
-                im: InputMethod::Active(hints),
-                ..
-            } => Some(hints.clone()),
-            
-            Outcome {
-                panel: animation::Outcome::Visible{..},
-                im: InputMethod::InactiveSince(_),
-                ..
-            } => Some(InputMethodDetails {
-                hint: ContentHint::NONE,
-                purpose: ContentPurpose::Normal,
-            }),
-            
-            Outcome {
-                panel: animation::Outcome::Hidden,
-                ..
-            } => None,
-        };
 // FIXME: handle switching outputs
         let (dbus_visible_set, panel_visibility) = match new_state.panel {
             animation::Outcome::Visible{output, height, ..}
@@ -179,7 +158,6 @@ impl Outcome {
 
         Commands {
             panel_visibility,
-            layout_hint_set,
             dbus_visible_set,
             layout_selection,
         }

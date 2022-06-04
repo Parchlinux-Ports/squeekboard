@@ -26,12 +26,11 @@ use std::rc::Rc;
 use std::vec::Vec;
 
 use crate::action::Action;
+use crate::actors;
 use crate::drawing;
-use crate::event_loop::driver::Threaded as AppState;
 use crate::float_ord::FloatOrd;
 use crate::keyboard::KeyState;
 use crate::logging;
-use crate::manager;
 use crate::popover;
 use crate::receiver;
 use crate::submission::{ Submission, SubmitData, Timestamp };
@@ -221,7 +220,7 @@ pub mod c {
             submission: CSubmission,
             widget_to_layout: Transformation,
             time: u32,
-            manager: manager::c::Manager,
+            popover: actors::popover::c::Actor,
             app_state: receiver::c::State,
             ui_keyboard: EekGtkKeyboard,
         ) {
@@ -230,6 +229,7 @@ pub mod c {
             let submission = submission.clone_ref();
             let mut submission = submission.borrow_mut();
             let app_state = app_state.clone_owned();
+            let popover_state = popover.clone_owned();
             
             let ui_backend = UIBackend {
                 widget_to_layout,
@@ -245,7 +245,7 @@ pub mod c {
                     &mut submission,
                     Some(&ui_backend),
                     time,
-                    Some((manager, app_state.clone())),
+                    Some((&popover_state, app_state.clone())),
                     key,
                 );
             }
@@ -324,7 +324,7 @@ pub mod c {
             x_widget: f64, y_widget: f64,
             widget_to_layout: Transformation,
             time: u32,
-            manager: manager::c::Manager,
+            popover: actors::popover::c::Actor,
             app_state: receiver::c::State,
             ui_keyboard: EekGtkKeyboard,
         ) {
@@ -332,6 +332,9 @@ pub mod c {
             let layout = unsafe { &mut *layout };
             let submission = submission.clone_ref();
             let mut submission = submission.borrow_mut();
+            // We only need to query state here, not update.
+            // A copy is enough.
+            let popover_state = popover.clone_owned();
             let app_state = app_state.clone_owned();
             let ui_backend = UIBackend {
                 widget_to_layout,
@@ -363,7 +366,7 @@ pub mod c {
                             &mut submission,
                             Some(&ui_backend),
                             time,
-                            Some((manager, app_state.clone())),
+                            Some((&popover_state, app_state.clone())),
                             key,
                         );
                     }
@@ -388,7 +391,7 @@ pub mod c {
                         &mut submission,
                         Some(&ui_backend),
                         time,
-                        Some((manager, app_state.clone())),
+                        Some((&popover_state, app_state.clone())),
                         key,
                     );
                 }
@@ -1050,7 +1053,7 @@ mod seat {
         // passing state conditionally because it's only used for popover.
         // Eventually, it should be used for sumitting button events,
         // and passed always.
-        manager: Option<(manager::c::Manager, receiver::State)>,
+        manager: Option<(&actors::popover::State, receiver::State)>,
         rckey: &Rc<RefCell<KeyState>>,
     ) {
         let key: KeyState = {

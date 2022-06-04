@@ -52,7 +52,7 @@ make_widget (struct panel_manager *self)
     if (self->widget) {
         g_error("Widget already present");
     }
-    self->widget = eek_gtk_keyboard_new (self->state, self->submission, self->layout, self->state_manager);
+    self->widget = eek_gtk_keyboard_new (self->state, self->submission, self->state_manager, self->popover);
 
     gtk_widget_set_has_tooltip (self->widget, TRUE);
     gtk_container_add (GTK_CONTAINER(self->window), self->widget);
@@ -116,16 +116,16 @@ panel_manager_resize (struct panel_manager *self, uint32_t height)
 }
 
 
-struct panel_manager panel_manager_new(EekboardContextService *state, struct submission *submission, struct squeek_layout_state *layout, struct squeek_state_manager *state_manager)
+struct panel_manager panel_manager_new(EekboardContextService *state, struct submission *submission, struct squeek_state_manager *state_manager, struct squeek_popover *popover)
 {
     struct panel_manager mgr = {
         .state = state,
         .submission = submission,
-        .layout = layout,
         .window = NULL,
         .widget = NULL,
         .current_output = NULL,
         .state_manager = state_manager,
+        .popover = popover,
     };
     return mgr;
 }

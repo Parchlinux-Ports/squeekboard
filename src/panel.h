@@ -10,8 +10,8 @@ struct panel_manager {
     EekboardContextService *state; // unowned
     /// Needed for instantiating the widget
     struct squeek_state_manager *state_manager; // shared reference
+    struct squeek_popover *popover; // shared reference
     struct submission *submission; // unowned
-    struct squeek_layout_state *layout;
 
     PhoshLayerSurface *window;
     GtkWidget *widget; // nullable
@@ -20,4 +20,4 @@ struct panel_manager {
     struct wl_output *current_output;
 };
 
-struct panel_manager panel_manager_new(EekboardContextService *state, struct submission *submission, struct squeek_layout_state *layout, struct squeek_state_manager *state_manager);
+struct panel_manager panel_manager_new(EekboardContextService *state, struct submission *submission, struct squeek_state_manager *state_manager, struct squeek_popover *popover);
