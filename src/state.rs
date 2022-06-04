@@ -9,6 +9,7 @@ use crate::animation;
 use crate::debug;
 use crate::imservice::{ ContentHint, ContentPurpose };
 use crate::layout::ArrangementKind;
+use crate::main;
 use crate::main::Commands;
 use crate::outputs;
 use crate::outputs::{Millimeter, OutputId, OutputState};
@@ -153,10 +154,34 @@ impl Outcome {
             animation::Outcome::Hidden => (Some(false), Some(panel::Command::Hide)),
         };
 
+        // Compare the old and new states as not to flood with updates,
+        // which may look up in the file system.
+        use animation::Outcome::*;
+        let layout_selection = match &new_state.panel {
+            Visible{ contents: new_contents, ..} => {
+                let same
+                    = if let Visible { contents, .. } = &self.panel {
+                        contents == new_contents
+                    } else {
+                        false
+                    };
+
+                if !same {
+                    Some(main::commands::SetLayout {
+                        description: new_contents.clone()
+                    })
+                } else {
+                    None
+                }
+            },
+            animation::Outcome::Hidden => None,
+        };        
+
         Commands {
             panel_visibility,
             layout_hint_set,
             dbus_visible_set,
+            layout_selection,
         }
     }
 }

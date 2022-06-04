@@ -174,6 +174,18 @@ mod c {
                 )
             };
         }
+        
+        if let Some(commands::SetLayout { description }) = msg.layout_selection {
+            dbg!(description);
+        }
+    }
+}
+
+pub mod commands {
+    use crate::animation;
+    #[derive(Clone, Debug)]
+    pub struct SetLayout {
+        pub description: animation::Contents,
     }
 }
 
@@ -184,4 +196,5 @@ pub struct Commands {
     pub panel_visibility: Option<panel::Command>,
     pub layout_hint_set: Option<state::InputMethodDetails>,
     pub dbus_visible_set: Option<bool>,
+    pub layout_selection: Option<commands::SetLayout>,
 }
