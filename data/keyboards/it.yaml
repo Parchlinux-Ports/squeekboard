@@ -33,7 +33,7 @@ views:
         - "è é È É ù ú Ù Ú ò ó"
         - "à á À Á ì í Ì Í Ò Ó"
         - "show_numbers   “ ” « » ≈ ≠ ‽  BackSpace"
-        - "show_letters show_eschars preferences         space        ç ß Return"
+        - "show_letters show_eschars preferences         space        , . Return"
 
 buttons:
     Shift_L:
