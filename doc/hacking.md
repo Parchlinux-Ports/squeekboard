@@ -90,6 +90,14 @@ Layouts can be selected using the GNOME Settings application.
 $ gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('xkb', 'de')]"
 ```
 
+### Debugging mode
+
+Squeekboard prints some information on standard output by default. To get deep debugging information, it can also print all changes in (some of) its internal state. Those logs are most useful when reporting hard to catch issues, and can be enabled using the following command:
+
+```
+busctl set-property --user sm.puri.SqueekDebug /sm/puri/SqueekDebug sm.puri.SqueekDebug Enabled b true
+```
+
 ### Environment Variables
 
 Besides the environment variables supported by GTK and [GLib](https://docs.gtk.org/glib/running.html) applications
