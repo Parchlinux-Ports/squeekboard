@@ -1,4 +1,4 @@
-/* Copyright (C) 2021 Purism SPC
+/* Copyright (C) 2021,2022 Purism SPC
  * SPDX-License-Identifier: GPL-3.0+
  */
 
@@ -8,11 +8,14 @@
 use crate::animation;
 use crate::debug;
 use crate::imservice::{ ContentHint, ContentPurpose };
+use crate::layout::ArrangementKind;
+use crate::main;
 use crate::main::Commands;
 use crate::outputs;
 use crate::outputs::{Millimeter, OutputId, OutputState};
 use crate::panel;
 use crate::panel::PixelSize;
+use crate::popover;
 use crate::util::Rational;
 use std::cmp;
 use std::collections::HashMap;
@@ -37,6 +40,29 @@ pub enum InputMethod {
     InactiveSince(Instant),
 }
 
+#[derive(Clone, Debug)]
+pub enum LayoutSource {
+    Xkb,
+    Other(String),
+}
+
+impl From<String> for LayoutSource {
+    fn from(v: String) -> Self {
+        if v.as_str() == "xkb" {
+            LayoutSource::Xkb
+        } else {
+           LayoutSource::Other(v)
+        }
+    }
+}
+
+/// The user's preferred system layout
+#[derive(Clone, Debug)]
+pub struct LayoutChoice {
+    pub name: String,
+    pub source: LayoutSource,
+}
+
 /// Incoming events.
 /// This contains events that cause a change to the internal state.
 #[derive(Clone, Debug)]
@@ -45,6 +71,8 @@ pub enum Event {
     Visibility(visibility::Event),
     PhysicalKeyboard(Presence),
     Output(outputs::Event),
+    LayoutChoice(LayoutChoice),
+    OverlayChanged(popover::LayoutId),
     Debug(debug::Event),
     /// Event triggered because a moment in time passed.
     /// Use to animate state transitions.
@@ -87,7 +115,7 @@ pub mod visibility {
 /// The outwardly visible state.
 #[derive(Clone, Debug)]
 pub struct Outcome {
-    pub visibility: animation::Outcome,
+    pub panel: animation::Outcome,
     pub im: InputMethod,
 }
 
@@ -98,36 +126,40 @@ impl Outcome {
     /// The receivers of the commands bear the burden
     /// of checking if the commands end up being no-ops.
     pub fn get_commands_to_reach(&self, new_state: &Self) -> Commands {
-        let layout_hint_set = match new_state {
-            Outcome {
-                visibility: animation::Outcome::Visible{..},
-                im: InputMethod::Active(hints),
-            } => Some(hints.clone()),
-            
-            Outcome {
-                visibility: animation::Outcome::Visible{..},
-                im: InputMethod::InactiveSince(_),
-            } => Some(InputMethodDetails {
-                hint: ContentHint::NONE,
-                purpose: ContentPurpose::Normal,
-            }),
-            
-            Outcome {
-                visibility: animation::Outcome::Hidden,
-                ..
-            } => None,
-        };
 // FIXME: handle switching outputs
-        let (dbus_visible_set, panel_visibility) = match new_state.visibility {
-            animation::Outcome::Visible{output, height}
+        let (dbus_visible_set, panel_visibility) = match new_state.panel {
+            animation::Outcome::Visible{output, height, ..}
                 => (Some(true), Some(panel::Command::Show{output, height})),
             animation::Outcome::Hidden => (Some(false), Some(panel::Command::Hide)),
         };
 
+        // Compare the old and new states as not to flood with updates,
+        // which may look up in the file system.
+        use animation::Outcome::*;
+        let layout_selection = match &new_state.panel {
+            Visible{ contents: new_contents, ..} => {
+                let same
+                    = if let Visible { contents, .. } = &self.panel {
+                        contents == new_contents
+                    } else {
+                        false
+                    };
+
+                if !same {
+                    Some(main::commands::SetLayout {
+                        description: new_contents.clone()
+                    })
+                } else {
+                    None
+                }
+            },
+            animation::Outcome::Hidden => None,
+        };        
+
         Commands {
             panel_visibility,
-            layout_hint_set,
             dbus_visible_set,
+            layout_selection,
         }
     }
 }
@@ -156,6 +188,13 @@ pub struct Application {
     /// but not sure about being allowed on non-touch displays.
     pub preferred_output: Option<OutputId>,
     pub outputs: HashMap<OutputId, OutputState>,
+    /// We presume that the system always has some preference,
+    /// even though we receive the preference after init,
+    /// and we might not receive one at all (gsettings missing).
+    /// Then a default is used.
+    pub layout_choice: LayoutChoice,
+    /// Manual override of the system layout
+    pub overlay_layout: Option<popover::LayoutId>,
 }
 
 impl Application {
@@ -173,6 +212,11 @@ impl Application {
             debug_mode_enabled: false,
             preferred_output: None,
             outputs: Default::default(),
+            layout_choice: LayoutChoice {
+                name: String::from("us"),
+                source: LayoutSource::Xkb,
+            },
+            overlay_layout: None,
         }
     }
 
@@ -257,7 +301,18 @@ impl Application {
                     im: InputMethod::InactiveSince(old),
                     ..self
                 },
-            }
+            },
+            
+            Event::LayoutChoice(layout_choice) => Self {
+                layout_choice,
+                overlay_layout: None,
+                ..self
+            },
+            
+            Event::OverlayChanged(overlay_layout) => Self {
+                overlay_layout: Some(overlay_layout),
+                ..self
+            },
         };
 
         if state.debug_mode_enabled {
@@ -273,7 +328,9 @@ Outcome:
         state
     }
 
-    fn get_preferred_height(output: &OutputState) -> Option<PixelSize> {
+    fn get_preferred_height_and_arrangement(output: &OutputState)
+        -> Option<(PixelSize, ArrangementKind)>
+    {
         output.get_pixel_size()
             .map(|px_size| {
                 // Assume isotropy.
@@ -301,61 +358,95 @@ Outcome:
                 // TODO: calculate based on selected layout
                 const ROW_COUNT: u32 = 4;
 
-                let height = {
-                    let ideal_height = IDEAL_TARGET_SIZE * ROW_COUNT as i32;
-                    let ideal_height_px = (ideal_height * density).ceil().0 as u32;
+                let ideal_height = IDEAL_TARGET_SIZE * ROW_COUNT as i32;
+                let ideal_height_px = (ideal_height * density).ceil().0 as u32;
 
-                    // Reduce height to match what the layout can fill.
-                    // For this, we need to guess if normal or wide will be picked up.
-                    // This must match `eek_gtk_keyboard.c::get_type`.
-                    // TODO: query layout database and choose one directly
-                    let abstract_width
-                        = PixelSize {
-                            scale_factor: output.scale as u32,
-                            pixels: px_size.width,
-                        } 
-                        .as_scaled_ceiling();
+                // Reduce height to match what the layout can fill.
+                // For this, we need to guess if normal or wide will be picked up.
+                // This must match `eek_gtk_keyboard.c::get_type`.
+                // TODO: query layout database and choose one directly
+                let abstract_width
+                    = PixelSize {
+                        scale_factor: output.scale as u32,
+                        pixels: px_size.width,
+                    } 
+                    .as_scaled_ceiling();
 
-                    let height_as_widths = {
-                        if abstract_width < 540 {
-                            // Normal
-                            Rational {
-                                numerator: 210,
-                                denominator: 360,
-                            }
-                        } else {
-                            // Wide
-                            Rational {
-                                numerator: 172,
-                                denominator: 540,
-                            }
+                let (arrangement, height_as_widths) = {
+                    if abstract_width < 540 {(
+                        ArrangementKind::Base,
+                        Rational {
+                            numerator: 210,
+                            denominator: 360,
+                        },
+                    )} else {(
+                        ArrangementKind::Wide,
+                        Rational {
+                            numerator: 172,
+                            denominator: 540,
                         }
-                    };
-                    cmp::min(
+                    )}
+                };
+
+                let height
+                    = cmp::min(
                         ideal_height_px,
                         (height_as_widths * px_size.width as i32).ceil() as u32,
-                    )
-                };
-                PixelSize {
-                    scale_factor: output.scale as u32,
-                    pixels: cmp::min(height, px_size.height / 2),
-                }
+                    );
+
+                (
+                    PixelSize {
+                        scale_factor: output.scale as u32,
+                        pixels: cmp::min(height, px_size.height / 2),
+                    },
+                    arrangement,
+                )
             })
+    }
+    
+    /// Returns layout name, overlay name
+    fn get_layout_names(&self) -> (String, Option<String>) {
+        (
+            String::from(match &self.overlay_layout {
+                Some(popover::LayoutId::System { name, .. }) => name,
+                _ => &self.layout_choice.name,
+            }),
+            match &self.overlay_layout {
+                Some(popover::LayoutId::Local(name)) => Some(name.clone()),
+                _ => None,
+            },
+        )
     }
 
     pub fn get_outcome(&self, now: Instant) -> Outcome {
         // FIXME: include physical keyboard presence
         Outcome {
-            visibility: match self.preferred_output {
+            panel: match self.preferred_output {
                 None => animation::Outcome::Hidden,
                 Some(output) => {
-                    // Hoping that this will get optimized out on branches not using `visible`.
-                    let height = Self::get_preferred_height(self.outputs.get(&output).unwrap())
-                        .unwrap_or(PixelSize{pixels: 0, scale_factor: 1});
+                    let (height, arrangement) = Self::get_preferred_height_and_arrangement(self.outputs.get(&output).unwrap())
+                        .unwrap_or((
+                            PixelSize{pixels: 0, scale_factor: 1},
+                            ArrangementKind::Base,
+                        ));
+                    let (layout_name, overlay) = self.get_layout_names();
+        
                     // TODO: Instead of setting size to 0 when the output is invalid,
                     // simply go invisible.
-                    let visible = animation::Outcome::Visible{ output, height };
-                    
+                    let visible = animation::Outcome::Visible{
+                        output,
+                        height,
+                        contents: animation::Contents {
+                            kind: arrangement,
+                            name: layout_name,
+                            overlay_name: overlay,
+                            purpose: match self.im {
+                                InputMethod::Active(InputMethodDetails { purpose, .. }) => purpose,
+                                InputMethod::InactiveSince(_) => ContentPurpose::Normal,
+                            },
+                        }
+                    };
+
                     match (self.physical_keyboard, self.visibility_override) {
                         (_, visibility::State::ForcedHidden) => animation::Outcome::Hidden,
                         (_, visibility::State::ForcedVisible) => visible,
@@ -446,7 +537,7 @@ pub mod test {
         for _i in 0..100 {
             now += Duration::from_millis(1);
             assert_matches!(
-                state.get_outcome(now).visibility,
+                state.get_outcome(now).panel,
                 animation::Outcome::Visible{..},
                 "Hidden when it should remain visible: {:?}",
                 now.saturating_duration_since(start),
@@ -455,7 +546,10 @@ pub mod test {
 
         let state = state.apply_event(Event::InputMethod(InputMethod::Active(imdetails_new())), now);
 
-        assert_matches!(state.get_outcome(now).visibility, animation::Outcome::Visible{..});
+        assert_matches!(
+            state.get_outcome(now).panel,
+            animation::Outcome::Visible{..}
+        );
     }
 
     /// Make sure that hiding works when input method goes away
@@ -472,7 +566,7 @@ pub mod test {
         
         let state = state.apply_event(Event::InputMethod(InputMethod::InactiveSince(now)), now);
 
-        while let animation::Outcome::Visible{..} = state.get_outcome(now).visibility {
+        while let animation::Outcome::Visible{..} = state.get_outcome(now).panel {
             now += Duration::from_millis(1);
             assert!(
                 now < start + Duration::from_millis(250),
@@ -502,7 +596,7 @@ pub mod test {
         let state = state.apply_event(Event::InputMethod(InputMethod::Active(imdetails_new())), now);
         let state = state.apply_event(Event::InputMethod(InputMethod::InactiveSince(now)), now);
 
-        while let animation::Outcome::Visible{..} = state.get_outcome(now).visibility {
+        while let animation::Outcome::Visible{..} = state.get_outcome(now).panel {
             now += Duration::from_millis(1);
             assert!(
                 now < start + Duration::from_millis(250),
@@ -515,7 +609,7 @@ pub mod test {
         for _i in 0..1000 {
             now += Duration::from_millis(1);
             assert_eq!(
-                state.get_outcome(now).visibility,
+                state.get_outcome(now).panel,
                 animation::Outcome::Hidden,
                 "Appeared unnecessarily: {:?}",
                 now.saturating_duration_since(start),
@@ -537,7 +631,7 @@ pub mod test {
 
         let state = state.apply_event(Event::Visibility(visibility::Event::ForceVisible), now);
         assert_matches!(
-            state.get_outcome(now).visibility,
+            state.get_outcome(now).panel,
             animation::Outcome::Visible{..},
             "Failed to show: {:?}",
             now.saturating_duration_since(start),
@@ -550,7 +644,7 @@ pub mod test {
         now += Duration::from_secs(1);
 
         assert_eq!(
-            state.get_outcome(now).visibility,
+            state.get_outcome(now).panel,
             animation::Outcome::Hidden,
             "Failed to release forced visibility: {:?}",
             now.saturating_duration_since(start),
@@ -571,7 +665,7 @@ pub mod test {
 
         let state = state.apply_event(Event::PhysicalKeyboard(Presence::Present), now);
         assert_eq!(
-            state.get_outcome(now).visibility,
+            state.get_outcome(now).panel,
             animation::Outcome::Hidden,
             "Failed to hide: {:?}",
             now.saturating_duration_since(start),
@@ -583,7 +677,7 @@ pub mod test {
         let state = state.apply_event(Event::InputMethod(InputMethod::Active(imdetails_new())), now);
 
         assert_eq!(
-            state.get_outcome(now).visibility,
+            state.get_outcome(now).panel,
             animation::Outcome::Hidden,
             "Failed to remain hidden: {:?}",
             now.saturating_duration_since(start),
@@ -593,7 +687,7 @@ pub mod test {
         let state = state.apply_event(Event::PhysicalKeyboard(Presence::Missing), now);
 
         assert_matches!(
-            state.get_outcome(now).visibility,
+            state.get_outcome(now).panel,
             animation::Outcome::Visible{..},
             "Failed to appear: {:?}",
             now.saturating_duration_since(start),
@@ -605,7 +699,7 @@ pub mod test {
     fn size_l5() {
         use crate::outputs::{Mode, Geometry, c, Size};
         assert_eq!(
-            Application::get_preferred_height(&OutputState {
+            Application::get_preferred_height_and_arrangement(&OutputState {
                 current_mode: Some(Mode {
                     width: 720,
                     height: 1440,
@@ -619,10 +713,13 @@ pub mod test {
                 }),
                 scale: 2,
             }),
-            Some(PixelSize {
-                scale_factor: 2,
-                pixels: 420,
-            }),
+            Some((
+                PixelSize {
+                    scale_factor: 2,
+                    pixels: 420,
+                },
+                ArrangementKind::Base,
+            )),
         );
     }
 }

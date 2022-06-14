@@ -7,6 +7,8 @@
 #include "eek/eek-gtk-keyboard.h"
 #include "eek/eek-renderer.h"
 #include "eek/eek-types.h"
+#include "src/main.h"
+#include "src/popover.h"
 #include "src/submission.h"
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 #include "text-input-unstable-v3-client-protocol.h"
@@ -40,7 +42,8 @@ void squeek_layout_release(struct squeek_layout *layout,
                            struct submission *submission,
                            struct transformation widget_to_layout,
                            uint32_t timestamp,
-                           EekboardContextService *manager,
+                           struct squeek_popover *popover,
+                           struct squeek_state_manager *state,
                            EekGtkKeyboard *ui_keyboard);
 void squeek_layout_release_all_only(struct squeek_layout *layout,
                                     struct submission *submission,
@@ -54,7 +57,8 @@ void squeek_layout_drag(struct squeek_layout *layout,
                         struct submission *submission,
                         double x_widget, double y_widget,
                         struct transformation widget_to_layout,
-                        uint32_t timestamp, EekboardContextService *manager,
+                        uint32_t timestamp, struct squeek_popover *popover,
+                        struct squeek_state_manager *state,
                         EekGtkKeyboard *ui_keyboard);
 void squeek_layout_draw_all_changed(struct squeek_layout *layout, EekRenderer* renderer, cairo_t     *cr, struct submission *submission);
 void squeek_draw_layout_base_view(struct squeek_layout *layout, EekRenderer* renderer, cairo_t     *cr);

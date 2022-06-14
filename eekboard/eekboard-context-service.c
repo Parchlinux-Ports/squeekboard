@@ -55,7 +55,7 @@ static guint signals[LAST_SIGNAL] = { 0, };
  */
 struct _EekboardContextService {
     GObject parent;
-    struct squeek_layout_state *layout; // Unowned
+    struct squeek_state_manager *state_manager; // shared reference
 
     LevelKeyboard *keyboard; // currently used keyboard
     GSettings *settings; // Owned reference
@@ -126,24 +126,7 @@ settings_get_layout(GSettings *settings, char **type, char **layout)
     g_variant_unref(inputs);
 }
 
-void
-eekboard_context_service_use_layout(EekboardContextService *context, struct squeek_layout_state *state, uint32_t timestamp) {
-    gchar *layout_name = state->layout_name;
-    gchar *overlay_name = state->overlay_name;
-
-    // try to get the best keyboard layout
-    if (layout_name == NULL) {
-        layout_name = "us";
-    }
-
-    // overlay is "Normal" for most layouts, we will only look for "terminal" in rust code.
-    // for now just avoid passing a null pointer
-    if (overlay_name == NULL) {
-        overlay_name = "";    // fallback to Normal
-    }
-    
-    // generic part follows
-    struct squeek_layout *layout = squeek_load_layout(layout_name, state->arrangement, state->purpose, overlay_name);
+void eekboard_context_service_set_layout(EekboardContextService *context, struct squeek_layout *layout, uint32_t timestamp) {
     LevelKeyboard *keyboard = level_keyboard_new(layout);
     // set as current
     LevelKeyboard *previous_keyboard = context->keyboard;
@@ -169,17 +152,7 @@ static void eekboard_context_service_update_settings_layout(EekboardContextServi
     settings_get_layout(context->settings,
                         &keyboard_type, &keyboard_layout);
 
-    if (g_strcmp0(context->layout->layout_name, keyboard_layout) != 0 || context->layout->overlay_name) {
-        g_free(context->layout->overlay_name);
-        context->layout->overlay_name = NULL;
-        if (keyboard_layout) {
-            g_free(context->layout->layout_name);
-            context->layout->layout_name = g_strdup(keyboard_layout);
-        }
-        // This must actually update the UI.
-        uint32_t time = gdk_event_get_time(NULL);
-        eekboard_context_service_use_layout(context, context->layout, time);
-    }
+    squeek_state_send_layout_set(context->state_manager, keyboard_layout, keyboard_type, gdk_event_get_time(NULL));
 }
 
 static gboolean
@@ -297,47 +270,17 @@ eekboard_context_service_get_keyboard (EekboardContextService *context)
     return context->keyboard;
 }
 
-// Used from Rust.
-// TODO: move hint management to Rust entirely
-void eekboard_context_service_set_hint_purpose(EekboardContextService *context,
-                                               uint32_t hint, uint32_t purpose)
-{
-    if (context->layout->hint != hint || context->layout->purpose != purpose) {
-        context->layout->hint = hint;
-        context->layout->purpose = purpose;
-        uint32_t time = gdk_event_get_time(NULL);
-        eekboard_context_service_use_layout(context, context->layout, time);
-    }
-}
-
-void
-eekboard_context_service_set_overlay(EekboardContextService *context, const char* name) {
-    if (g_strcmp0(context->layout->overlay_name, name)) {
-        g_free(context->layout->overlay_name);
-        context->layout->overlay_name = g_strdup(name);
-        uint32_t time = gdk_event_get_time(NULL);
-        eekboard_context_service_use_layout(context, context->layout, time);
-    }
-}
-
-const char*
-eekboard_context_service_get_overlay(EekboardContextService *context) {
-    return context->layout->overlay_name;
-}
-
-EekboardContextService *eekboard_context_service_new(struct squeek_layout_state *state)
+EekboardContextService *eekboard_context_service_new(struct squeek_state_manager *state_manager)
 {
     EekboardContextService *context = g_object_new (EEKBOARD_TYPE_CONTEXT_SERVICE, NULL);
-    context->layout = state;
+    context->state_manager = state_manager;
     eekboard_context_service_update_settings_layout(context);
-    uint32_t time = gdk_event_get_time(NULL);
-    eekboard_context_service_use_layout(context, context->layout, time);
     return context;
 }
 
 void eekboard_context_service_set_submission(EekboardContextService *context, struct submission *submission) {
     context->submission = submission;
-    if (context->submission) {
+    if (context->submission && context->keyboard) {
         uint32_t time = gdk_event_get_time(NULL);
         submission_use_layout(context->submission, context->keyboard->layout, time);
     }

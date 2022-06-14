@@ -4,11 +4,13 @@ use gio;
 use gtk;
 use std::ffi::CString;
 use std::cmp::Ordering;
-use ::layout::c::{ Bounds, EekGtkKeyboard };
-use ::locale::{ OwnedTranslation, compare_current_locale };
-use ::logging;
-use ::manager;
-use ::resources;
+use crate::actors;
+use crate::layout::c::{ Bounds, EekGtkKeyboard };
+use crate::locale::{ OwnedTranslation, compare_current_locale };
+use crate::logging;
+use crate::receiver;
+use crate::resources;
+use crate::state;
 
 // Traits
 use gio::prelude::ActionMapExt;
@@ -16,7 +18,7 @@ use gio::prelude::SettingsExt;
 use glib::translate::FromGlibPtrNone;
 use glib::variant::ToVariant;
 use gtk::prelude::*;
-use ::logging::Warn;
+use crate::logging::Warn;
 
 mod c {
     use std::os::raw::c_char;
@@ -127,9 +129,11 @@ fn get_settings(schema_name: &str) -> Option<gio::Settings> {
         .map(|_sschema| gio::Settings::new(schema_name))
 }
 
-fn set_layout(kind: String, name: String) {
+fn set_layout(kind: &str, name: &str) {
     let settings = get_settings("org.gnome.desktop.input-sources");
     if let Some(settings) = settings {
+        let kind = String::from(kind);
+        let name = String::from(name);
         #[cfg(feature = "glib_v0_14")]
         let inputs = settings.value("sources");
         #[cfg(not(feature = "glib_v0_14"))]
@@ -150,7 +154,7 @@ fn set_layout(kind: String, name: String) {
 
 /// A reference to what the user wants to see
 #[derive(PartialEq, Clone, Debug)]
-enum LayoutId {
+pub enum LayoutId {
     /// Affects the layout in system settings
     System {
         kind: String,
@@ -170,40 +174,23 @@ impl LayoutId {
 }
 
 fn set_visible_layout(
-    manager: manager::c::Manager,
-    layout_id: LayoutId,
+    layout_id: &LayoutId,
 ) {
     match layout_id {
         LayoutId::System { kind, name } => {
-            unsafe {
-                use std::ptr;
-                manager::c::eekboard_context_service_set_overlay(
-                    manager,
-                    ptr::null(),
-                );
-            }
             set_layout(kind, name);
-        }
-        LayoutId::Local(name) => {
-            let name = CString::new(name.as_str()).unwrap();
-            let name_ptr = name.as_ptr();
-            unsafe {
-                manager::c::eekboard_context_service_set_overlay(
-                    manager,
-                    name_ptr,
-                )
-            }
         },
+        _ => {},
     }
 }
 
 /// Takes into account first any overlays, then system layouts from the list
 fn get_current_layout(
-    manager: manager::c::Manager,
+    popover: &actors::popover::State,
     system_layouts: &Vec<LayoutId>,
 ) -> Option<LayoutId> {
-    match manager::get_overlay(manager) {
-        Some(name) => Some(LayoutId::Local(name)),
+    match &popover.overlay {
+        Some(name) => Some(LayoutId::Local(name.into())),
         None => system_layouts.get(0).map(LayoutId::clone),
     }
 }
@@ -247,7 +234,8 @@ fn translate_layout_names(layouts: &Vec<LayoutId>) -> Vec<OwnedTranslation> {
 pub fn show(
     window: EekGtkKeyboard,
     position: Bounds,
-    manager: manager::c::Manager,
+    popover: &actors::popover::State,
+    app_state: receiver::State,
 ) {
     unsafe { gtk::set_initialized() };
     let window = unsafe { gtk::Widget::from_glib_none(window.0) };
@@ -327,7 +315,7 @@ pub fn show(
 
     let action_group = gio::SimpleActionGroup::new();
 
-    if let Some(current_layout) = get_current_layout(manager, &system_layouts) {
+    if let Some(current_layout) = get_current_layout(popover, &system_layouts) {
         let current_layout_name = all_layouts.iter()
             .find(
                 |l| l.get_name() == current_layout.get_name()
@@ -356,10 +344,13 @@ pub fn show(
                                 .find(
                                     |choices| state == choices.get_name()
                                 ).unwrap();
-                            set_visible_layout(
-                                manager,
-                                layout.clone(),
-                            )
+                            app_state
+                                .send(state::Event::OverlayChanged(layout.clone()))
+                                .or_print(
+                                    logging::Problem::Bug,
+                                    &format!("Can't send to state"),
+                                );
+                            set_visible_layout(layout)
                         });
                 },
                 None => log_print!(

@@ -56,8 +56,6 @@ struct squeekboard {
     /// Gsettings hook for visibility. TODO: this does not belong in gsettings.
     ServerContextService *settings_handler;
     struct panel_manager panel_manager; // Controls the shape of the panel.
-    /// Currently wanted layout. TODO: merge into state::Application
-    struct squeek_layout_state layout_choice;
 };
 
 
@@ -400,7 +398,7 @@ main (int argc, char **argv)
     // Also initializes wayland
     struct rsobjects rsobjects = squeek_init();
 
-    instance.settings_context = eekboard_context_service_new(&instance.layout_choice);
+    instance.settings_context = eekboard_context_service_new(rsobjects.state_manager);
 
     // set up dbus
 
@@ -450,9 +448,10 @@ main (int argc, char **argv)
 
     instance.panel_manager = panel_manager_new(instance.settings_context,
         rsobjects.submission,
-        &instance.layout_choice);
+        rsobjects.state_manager,
+        rsobjects.popover);
 
-    register_ui_loop_handler(rsobjects.receiver, &instance.panel_manager, instance.settings_context, instance.dbus_handler);
+    register_ui_loop_handler(rsobjects.receiver, &instance.panel_manager, rsobjects.popover, instance.settings_context, instance.dbus_handler);
 
     session_register();
 

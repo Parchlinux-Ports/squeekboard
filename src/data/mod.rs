@@ -4,7 +4,7 @@
 
 /*! Combined module for dealing with layout files */
 
-mod loading;
+pub mod loading;
 pub mod parsing;
 
 use std::io;

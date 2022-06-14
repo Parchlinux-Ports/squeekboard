@@ -7,64 +7,16 @@
 use std::env;
 use std::fmt;
 use std::path::PathBuf;
-use std::convert::TryFrom;
 
 use super::{ Error, LoadError };
 use super::parsing;
 
-use ::layout::ArrangementKind;
-use ::logging;
-use ::util::c::as_str;
-use ::xdg;
-use ::imservice::ContentPurpose;
+use crate::layout;
+use crate::layout::ArrangementKind;
+use crate::logging;
+use crate::xdg;
+use crate::imservice::ContentPurpose;
 
-// traits, derives
-use ::logging::Warn;
-
-
-/// Gathers stuff defined in C or called by C
-pub mod c {
-    use super::*;
-    use std::os::raw::c_char;
-
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_load_layout(
-        name: *const c_char,    // name of the keyboard
-        type_: u32,             // type like Wide
-        variant: u32,          // purpose variant like numeric, terminal...
-        overlay: *const c_char, // the overlay (looking for "terminal")
-    ) -> *mut ::layout::Layout {
-        let type_ = match type_ {
-            0 => ArrangementKind::Base,
-            1 => ArrangementKind::Wide,
-            _ => panic!("Bad enum value"),
-        };
-        
-        let name = as_str(&name)
-            .expect("Bad layout name")
-            .expect("Empty layout name");
-
-        let variant = ContentPurpose::try_from(variant)
-                    .or_print(
-                        logging::Problem::Warning,
-                        "Received invalid purpose value",
-                    )
-                    .unwrap_or(ContentPurpose::Normal);
-
-        let overlay_str = as_str(&overlay)
-                .expect("Bad overlay name")
-                .expect("Empty overlay name");
-        let overlay_str = match overlay_str {
-            "" => None,
-            other => Some(other),
-        };
-
-        let (kind, layout) = load_layout_data_with_fallback(&name, type_, variant, overlay_str);
-        let layout = ::layout::Layout::new(layout, kind, variant);
-        Box::into_raw(Box::new(layout))
-    }
-}
 
 const FALLBACK_LAYOUT_NAME: &str = "us";
 
@@ -265,7 +217,7 @@ fn load_layout_data_with_fallback(
     kind: ArrangementKind,
     purpose: ContentPurpose,
     overlay: Option<&str>,
-) -> (ArrangementKind, ::layout::LayoutData) {
+) -> (ArrangementKind, layout::LayoutData) {
 
     // Build the path to the right keyboard layout subdirectory
     let path = env::var_os("SQUEEKBOARD_KEYBOARDSDIR")
@@ -300,6 +252,17 @@ fn load_layout_data_with_fallback(
     panic!("No useful layout found!");
 }
 
+pub fn load_layout(
+    name: String,
+    kind: ArrangementKind,
+    variant: ContentPurpose,
+    overlay: Option<String>,
+) -> layout::Layout {
+    let overlay = overlay.as_ref().map(String::as_str);
+    let (found_kind, layout)
+        = load_layout_data_with_fallback(&name, kind, variant, overlay);
+    layout::Layout::new(layout, found_kind, variant)
+}
 
 #[cfg(test)]
 mod tests {

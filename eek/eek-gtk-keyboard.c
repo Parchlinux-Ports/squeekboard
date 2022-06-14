@@ -35,6 +35,7 @@
 
 #include "eekboard/eekboard-context-service.h"
 #include "src/layout.h"
+#include "src/popover.h"
 #include "src/submission.h"
 
 #define LIBFEEDBACK_USE_UNSTABLE_API
@@ -48,6 +49,8 @@ typedef struct _EekGtkKeyboardPrivate
     struct render_geometry render_geometry; // mutable
 
     EekboardContextService *eekboard_context; // unowned reference
+    struct squeek_popover *popover; // shared reference
+    struct squeek_state_manager *state_manager; // shared reference
     struct submission *submission; // unowned reference
 
     struct squeek_layout_state *layout; // unowned
@@ -118,15 +121,6 @@ eek_gtk_keyboard_real_draw (GtkWidget *self,
     return FALSE;
 }
 
-// Units of virtual pixels size
-static enum squeek_arrangement_kind get_type(uint32_t width, uint32_t height) {
-    (void)height;
-    if (width < 540) {
-        return ARRANGEMENT_KIND_BASE;
-    }
-    return ARRANGEMENT_KIND_WIDE;
-}
-
 static void
 eek_gtk_keyboard_real_size_allocate (GtkWidget     *self,
                                      GtkAllocation *allocation)
@@ -134,15 +128,6 @@ eek_gtk_keyboard_real_size_allocate (GtkWidget     *self,
     EekGtkKeyboard *keyboard = EEK_GTK_KEYBOARD (self);
     EekGtkKeyboardPrivate *priv =
         eek_gtk_keyboard_get_instance_private (keyboard);
-    // check if the change would switch types
-    enum squeek_arrangement_kind new_type = get_type(
-                (uint32_t)(allocation->width - allocation->x),
-                (uint32_t)(allocation->height - allocation->y));
-    if (priv->layout->arrangement != new_type) {
-        priv->layout->arrangement = new_type;
-        uint32_t time = gdk_event_get_time(NULL);
-        eekboard_context_service_use_layout(priv->eekboard_context, priv->layout, time);
-    }
 
     if (priv->renderer) {
         set_allocation_size (keyboard, priv->keyboard->layout,
@@ -158,6 +143,7 @@ on_event_triggered (LfbEvent      *event,
                     GAsyncResult  *res,
                     gpointer      unused)
 {
+    (void)unused;
     g_autoptr (GError) err = NULL;
 
     if (!lfb_event_trigger_feedback_finish (event, res, &err)) {
@@ -188,7 +174,7 @@ static void drag(EekGtkKeyboard *self,
     squeek_layout_drag(eekboard_context_service_get_keyboard(priv->eekboard_context)->layout,
                        priv->submission,
                        x, y, priv->render_geometry.widget_to_layout, time,
-                       priv->eekboard_context, self);
+                       priv->popover, priv->state_manager, self);
 }
 
 static void release(EekGtkKeyboard *self, guint32 time)
@@ -199,7 +185,7 @@ static void release(EekGtkKeyboard *self, guint32 time)
     }
     squeek_layout_release(eekboard_context_service_get_keyboard(priv->eekboard_context)->layout,
                           priv->submission, priv->render_geometry.widget_to_layout, time,
-                          priv->eekboard_context, self);
+                          priv->popover, priv->state_manager, self);
 }
 
 static gboolean
@@ -406,13 +392,15 @@ on_notify_keyboard (GObject              *object,
 GtkWidget *
 eek_gtk_keyboard_new (EekboardContextService *eekservice,
                       struct submission *submission,
-                      struct squeek_layout_state *layout)
+                      struct squeek_state_manager *state_manager,
+                      struct squeek_popover *popover)
 {
     EekGtkKeyboard *ret = EEK_GTK_KEYBOARD(g_object_new (EEK_TYPE_GTK_KEYBOARD, NULL));
     EekGtkKeyboardPrivate *priv = (EekGtkKeyboardPrivate*)eek_gtk_keyboard_get_instance_private (ret);
+    priv->popover = popover;
     priv->eekboard_context = eekservice;
     priv->submission = submission;
-    priv->layout = layout;
+    priv->state_manager = state_manager;
     priv->renderer = NULL;
     // This should really be done on initialization.
     // Before the widget is allocated,
