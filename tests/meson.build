@@ -76,6 +76,7 @@ foreach layout : [
     'es+cat',
     'fi',
     'fr', 'fr_wide',
+    'ge',
     'gr', 'gr_wide',
     'gr+polytonic',
     'fr+bepo', 'fr+bepo_wide',
