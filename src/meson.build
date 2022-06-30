@@ -25,18 +25,22 @@ sources = [
   '../eek/eek-renderer.c',
   '../eek/eek-types.c',
   '../eek/layersurface.c',
-  dbus_src,
   '../eekboard/eekboard-context-service.c',
-  #  '../eekboard/eekboard-xklutil.c',
-  squeekboard_resources,
-  wl_proto_sources,
 ]
+
+generated_sources = declare_dependency(
+  sources: [
+    dbus_src,
+    squeekboard_resources,
+    wl_proto_sources,
+  ],
+)
 
 cc = meson.get_compiler('c')
 
 
 deps = [
-#  dependency('glib-2.0', version: '>=2.26.0'),
+  generated_sources,
   dependency('gio-2.0', version: '>=2.26.0'),
   dependency('gio-unix-2.0'),
   dependency('gnome-desktop-3.0', version: '>=3.0'),
@@ -101,8 +105,6 @@ libsqueekboard = static_library('libsqueekboard',
 
 squeekboard = executable('squeekboard',
   'server-main.c',
-  wl_proto_sources,
-  squeekboard_resources,
   link_with: libsqueekboard,
   include_directories: [include_directories('..'), include_directories('../eek')],
   dependencies: deps,
