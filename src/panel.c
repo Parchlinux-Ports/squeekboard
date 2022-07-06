@@ -9,13 +9,8 @@ void
 panel_manager_hide(struct panel_manager *self)
 {
     if (self->window) {
-        gtk_widget_destroy (GTK_WIDGET (self->window));
+        gtk_widget_hide (GTK_WIDGET (self->window));
     }
-    if (self->widget) {
-        gtk_widget_destroy (GTK_WIDGET (self->widget));
-    }
-    self->window = NULL;
-    self->widget = NULL;
 }
 
 static void
@@ -65,42 +60,40 @@ make_widget (struct panel_manager *self)
 void
 panel_manager_request_widget (struct panel_manager *self, struct wl_output *output, uint32_t height, struct squeek_panel_manager *mgr)
 {
-    if (self->window) {
-        g_error("Window already present");
+    if (!self->window) {
+        self->window = g_object_new (
+            PHOSH_TYPE_LAYER_SURFACE,
+            "layer-shell", squeek_wayland->layer_shell,
+            "wl-output", output,
+            "height", height,
+            "anchor", ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM
+            | ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT
+            | ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT,
+            "layer", ZWLR_LAYER_SHELL_V1_LAYER_TOP,
+            "kbd-interactivity", FALSE,
+            "exclusive-zone", height,
+            "namespace", "osk",
+            NULL
+        );
+        g_object_connect (self->window,
+            "swapped-signal::destroy", G_CALLBACK(on_destroy), self,
+            "swapped-signal::configured", G_CALLBACK(on_surface_configure), mgr,
+            NULL);
+        // The properties below are just to make hacking easier.
+        // The way we use layer-shell overrides some,
+        // and there's no space in the protocol for others.
+        // Those may still be useful in the future,
+        // or for hacks with regular windows.
+        gtk_widget_set_can_focus (GTK_WIDGET(self->window), FALSE);
+        g_object_set (G_OBJECT(self->window), "accept_focus", FALSE, NULL);
+        gtk_window_set_title (GTK_WINDOW(self->window), "Squeekboard");
+        gtk_window_set_icon_name (GTK_WINDOW(self->window), "squeekboard");
+        gtk_window_set_keep_above (GTK_WINDOW(self->window), TRUE);
     }
 
-    self->window = g_object_new (
-        PHOSH_TYPE_LAYER_SURFACE,
-        "layer-shell", squeek_wayland->layer_shell,
-        "wl-output", output,
-        "height", height,
-        "anchor", ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM
-        | ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT
-        | ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT,
-        "layer", ZWLR_LAYER_SHELL_V1_LAYER_TOP,
-        "kbd-interactivity", FALSE,
-        "exclusive-zone", height,
-        "namespace", "osk",
-        NULL
-    );
-
-    g_object_connect (self->window,
-        "swapped-signal::destroy", G_CALLBACK(on_destroy), self,
-        "swapped-signal::configured", G_CALLBACK(on_surface_configure), mgr,
-        NULL);
-
-    // The properties below are just to make hacking easier.
-    // The way we use layer-shell overrides some,
-    // and there's no space in the protocol for others.
-    // Those may still be useful in the future,
-    // or for hacks with regular windows.
-    gtk_widget_set_can_focus (GTK_WIDGET(self->window), FALSE);
-    g_object_set (G_OBJECT(self->window), "accept_focus", FALSE, NULL);
-    gtk_window_set_title (GTK_WINDOW(self->window), "Squeekboard");
-    gtk_window_set_icon_name (GTK_WINDOW(self->window), "squeekboard");
-    gtk_window_set_keep_above (GTK_WINDOW(self->window), TRUE);
-
-    make_widget(self);
+    if (!self->widget) {
+        make_widget(self);
+    }
 
     gtk_widget_show (GTK_WIDGET(self->window));
 }

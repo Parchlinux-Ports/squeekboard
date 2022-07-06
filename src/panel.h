@@ -13,8 +13,10 @@ struct panel_manager {
     struct squeek_popover *popover; // shared reference
     struct submission *submission; // unowned
 
+    // both memoized - doesn't have to be, but bugs happen:
+    // https://gitlab.gnome.org/World/Phosh/squeekboard/-/issues/343
     PhoshLayerSurface *window;
-    GtkWidget *widget; // nullable
+    GtkWidget *widget;
 
     // Those should be held in Rust
     struct wl_output *current_output;
