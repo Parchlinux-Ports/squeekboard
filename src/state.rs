@@ -271,8 +271,9 @@ impl Application {
                 app
             },
 
-            Event::InputMethod(new_im) => match (self.im.clone(), new_im) {
-                (InputMethod::Active(_old), InputMethod::Active(new_im))
+            Event::InputMethod(new_im)
+            => match (self.im.clone(), new_im, self.visibility_override) {
+                (InputMethod::Active(_old), InputMethod::Active(new_im), _)
                 => Self {
                     im: InputMethod::Active(new_im),
                     ..self
@@ -280,13 +281,20 @@ impl Application {
                 // For changes in active state, remove user's visibility override.
                 // Both cases spelled out explicitly, rather than by the wildcard,
                 // to not lose the notion that it's the opposition that matters
-                (InputMethod::InactiveSince(_old), InputMethod::Active(new_im))
+                (InputMethod::InactiveSince(_old), InputMethod::Active(new_im), _)
                 => Self {
                     im: InputMethod::Active(new_im),
                     visibility_override: visibility::State::NotForced,
                     ..self
                 },
-                (InputMethod::Active(_old), InputMethod::InactiveSince(since))
+                // Avoid triggering animation when old state was forced hidden
+                (InputMethod::Active(_old), InputMethod::InactiveSince(_since), visibility::State::ForcedHidden)
+                => Self {
+                    im: InputMethod::InactiveSince(now - animation::HIDING_TIMEOUT * 2),
+                    visibility_override: visibility::State::NotForced,
+                    ..self
+                },
+                (InputMethod::Active(_old), InputMethod::InactiveSince(since), _)
                 => Self {
                     im: InputMethod::InactiveSince(since),
                     visibility_override: visibility::State::NotForced,
@@ -294,7 +302,7 @@ impl Application {
                 },
                 // This is a weird case, there's no need to update an inactive state.
                 // But it's not wrong, just superfluous.
-                (InputMethod::InactiveSince(old), InputMethod::InactiveSince(_new))
+                (InputMethod::InactiveSince(old), InputMethod::InactiveSince(_new), _)
                 => Self {
                     // New is going to be newer than old, so it can be ignored.
                     // It was already inactive at that moment.
