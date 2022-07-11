@@ -1,3 +1,44 @@
+squeekboard (1.19.0-1) experimental; urgency=medium
+
+  [ Dorota Czaplejewicz ]
+  * docs: Describe layouts
+  * glib: Fix import
+  * state: Record layout choice
+  * doc: Describe how to control debugging mode
+  * state: Include layout choice in visible outcome
+  * state: Store layout override
+  * state: Decide panel arrangement
+  * state: Use dummy layout command
+  * state: Use IM hint and purpose for layout selection
+  * main: Dry-load layout in response to the layout command
+  * state: Become the source of layout choice
+  * cargo: Halt overzealous upgrader
+  * ci: Use bookworm for online builds
+  * build: Generate files before compiling sources
+  * gtk: Persist panel state
+  * build: Update Cargo.lock
+
+  [ Luke Luo ]
+  * Add Chinese (China) translation
+
+  [ Éloi Rivard ]
+  * Add French translation
+
+  [ Laurent Laffont ]
+  * Add FR+Bépo layout
+
+  [ Bytez ]
+  * Fixed missing characters in eschars view in italian layout.
+  * Replaced foreign characters.
+
+  [ Aleksandr Melman ]
+  * Add Russian translation
+
+  [ skysphr ]
+  * Added Georgian layout
+
+ -- Dorota Czaplejewicz <dorota.czaplejewicz@puri.sm>  Wed, 06 Jul 2022 06:10:40 +0000
+
 squeekboard (1.18.0-1) experimental; urgency=medium
 
   [ Hugo Carvalho ]
