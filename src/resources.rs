@@ -110,6 +110,8 @@ static KEYBOARDS: &[(&'static str, &'static str)] = &[
 
     ("terminal/us", include_str!("../data/keyboards/terminal/us.yaml")),
     ("terminal/us_wide",   include_str!("../data/keyboards/terminal/us_wide.yaml")),
+    ("terminal/us+dvorak", include_str!("../data/keyboards/terminal/us+dvorak.yaml")),
+    ("terminal/us+dvorak_wide",   include_str!("../data/keyboards/terminal/us+dvorak_wide.yaml")),
 
     // Overlays
     ("emoji/us", include_str!("../data/keyboards/emoji/us.yaml")),

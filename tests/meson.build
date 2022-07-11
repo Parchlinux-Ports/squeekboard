@@ -100,6 +100,8 @@ foreach layout : [
     'terminal/fr_wide', 
     'terminal/us',
     'terminal/us_wide',
+    'terminal/us+dvorak',
+    'terminal/us+dvorak_wide',
     
     # Block: Not languages.
     'emoji/us',
