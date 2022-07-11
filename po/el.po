@@ -1,0 +1,46 @@
+# Greek translation for squeekboard.
+# Copyright (C) 2022 squeekboard's COPYRIGHT HOLDER
+# This file is distributed under the same license as the squeekboard package.
+# Efstathios Iosifidis <eiosifidis@gnome.org>, 2022.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: squeekboard master\n"
+"Report-Msgid-Bugs-To: https://gitlab.gnome.org/World/Phosh/squeekboard/"
+"issues\n"
+"POT-Creation-Date: 2022-07-11 06:54+0000\n"
+"PO-Revision-Date: 2022-07-11 23:11+0300\n"
+"Last-Translator: Efstathios Iosifidis <eiosifidis@gnome.org>\n"
+"Language-Team: Greek <gnome-el-list@gnome.org>\n"
+"Language: el\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.1\n"
+
+#. translators: This is a emmoji keyboard layout
+#: data/popover.ui:6
+msgid "Emoji"
+msgstr "Emoji"
+
+#. translators: This is a terminal keyboard layout
+#: data/popover.ui:12
+msgid "Terminal"
+msgstr "Τερματικό"
+
+#: data/popover.ui:18
+msgid "Keyboard Settings"
+msgstr "Ρυθμίσεις πληκτρολογίου"
+
+#: data/sm.puri.Squeekboard.desktop.in.in:3
+msgid "Squeekboard"
+msgstr "Squeekboard"
+
+#: data/sm.puri.Squeekboard.desktop.in.in:4
+msgid "On Screen Keyboard"
+msgstr "Πληκτρολόγιο οθόνης"
+
+#: data/sm.puri.Squeekboard.desktop.in.in:5
+msgid "An on screen virtual keyboard"
+msgstr "Εικονικό πληκτρολόγιο οθόνης"
