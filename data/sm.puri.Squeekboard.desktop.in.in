@@ -8,3 +8,4 @@ Terminal=false
 Type=Application
 NoDisplay=true
 Categories=GTK;Utility;
+X-Phosh-UsesFeedback=true
