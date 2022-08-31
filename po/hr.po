@@ -1,0 +1,47 @@
+# Croatian translation for squeekboard.
+# Copyright (C) 2022 squeekboard's COPYRIGHT HOLDER
+# This file is distributed under the same license as the squeekboard package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: squeekboard master\n"
+"Report-Msgid-Bugs-To: https://gitlab.gnome.org/World/Phosh/squeekboard/"
+"issues\n"
+"POT-Creation-Date: 2022-07-11 20:12+0000\n"
+"PO-Revision-Date: 2022-08-31 09:49+0200\n"
+"Last-Translator: \n"
+"Language-Team: Croatian <hr@li.org>\n"
+"Language: hr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 "
+"&& n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: Poedit 3.1.1\n"
+
+#. translators: This is a emmoji keyboard layout
+#: data/popover.ui:6
+msgid "Emoji"
+msgstr "Smajli"
+
+#. translators: This is a terminal keyboard layout
+#: data/popover.ui:12
+msgid "Terminal"
+msgstr "Terminal"
+
+#: data/popover.ui:18
+msgid "Keyboard Settings"
+msgstr "Postavke tipkovnice"
+
+#: data/sm.puri.Squeekboard.desktop.in.in:3
+msgid "Squeekboard"
+msgstr "Squeekboard"
+
+#: data/sm.puri.Squeekboard.desktop.in.in:4
+msgid "On Screen Keyboard"
+msgstr "Zaslonska tipkovnica"
+
+#: data/sm.puri.Squeekboard.desktop.in.in:5
+msgid "An on screen virtual keyboard"
+msgstr "Zaslonska virtualna tipkovnica"
