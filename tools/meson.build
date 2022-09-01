@@ -16,5 +16,5 @@ test_layout = custom_target('squeekboard-test-layout',
         + cargo_build_flags,
     install: true,
     install_dir: bindir,
-    depends: cargo_toml,
+    depends: cargo_deps,
 )
