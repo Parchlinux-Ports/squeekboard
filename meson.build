@@ -101,10 +101,15 @@ cargo_patch = []
 if get_option('newer') == true
     cargo_build_flags += ['--features', 'glib_v0_14']
     cargo_deps = files('Cargo.deps.newer')
+    cargo_lock = files('Cargo.lock.newer')
 else
     cargo_deps = files('Cargo.deps')
+    cargo_lock = []
     if get_option('online') == true
         cargo_patch = [files('Cargo.deps.online')]
+        if get_option('reset_lock') == true
+            cargo_lock = files('Cargo.lock')
+        endif
     endif
 endif
 
@@ -115,6 +120,17 @@ cargo_toml = custom_target(
     command: [cat, cargo_toml_base, cargo_deps] + cargo_patch,
     capture: true,
 )
+
+cargo_deps = [cargo_toml]
+if get_option('online') == true and get_option('reset_lock') == true
+    cargo_lock = custom_target(
+        'Cargo.lock',
+        output: 'Cargo.lock',
+        command: [cat, cargo_lock],
+        capture: true,
+    )
+    cargo_deps += [cargo_lock]
+endif
 
 dep_cargo = find_program('cargo')
 cargo_script = find_program('cargo.sh')
