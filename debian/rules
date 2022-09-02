@@ -25,7 +25,7 @@ export RUSTFLAGS = --remap-path-prefix=$(CURDIR)=/remap-pwd $(xgot)
 
 
 distrel := $(shell lsb_release --codename --short)
-ifneq (,$(filter $(distrel),sid))
+ifneq (,$(filter $(distrel),bookworm))
 	newer = true
 else
 	newer = false

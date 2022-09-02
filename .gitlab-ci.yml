@@ -76,7 +76,7 @@ build_deb:arm64:
     - cp ../*.deb .
 
 build_deb:future:
-  image: debian:sid
+  image: debian:bookworm
   allow_failure: true
   tags:
     - aarch64
