@@ -21,6 +21,7 @@
 #include "config.h"
 
 #define _XOPEN_SOURCE 500
+#include <bsd/string.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -91,12 +92,13 @@ void level_keyboard_free(LevelKeyboard *self) {
 }
 
 LevelKeyboard*
-level_keyboard_new (struct squeek_layout *layout)
+level_keyboard_new (char *style_name, struct squeek_layout *layout)
 {
     LevelKeyboard *keyboard = g_new0(LevelKeyboard, 1);
     if (!keyboard) {
         g_error("Failed to create a keyboard");
     }
     keyboard->layout = layout;
+    strlcpy(keyboard->style_name, style_name, 19);
     return keyboard;
 }

@@ -45,6 +45,7 @@ deps = [
   dependency('gio-unix-2.0'),
   dependency('gnome-desktop-3.0', version: '>=3.0'),
   dependency('gtk+-3.0', version: '>=3.0'),
+  dependency('libbsd'),
   dependency('libfeedback-0.0'),
   dependency('wayland-client', version: '>=1.14'),
   dependency('xkbcommon'),

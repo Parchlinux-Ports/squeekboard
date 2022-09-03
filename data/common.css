@@ -5,6 +5,11 @@ sq_view {
     font-size: 1.5em;
 }
 
+sq_view.gr_polytonic {
+    font-family: cantarell, sans-serif;
+    font-size: 5em;
+}
+
 sq_button {
     border-radius: 4px;
     margin: 2px;
