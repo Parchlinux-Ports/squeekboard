@@ -254,16 +254,32 @@ Inspect `debian/changelog`, and make sure the first line contains the correct ve
 squeekboard (1.13.0pureos0~amber0) amber-phone; urgency=medium
 ```
 
-Commit the updated `debian/changelog`. The commit message should contain the release version and a description of changes.
+Add the updated `debian/changelog` to the commit. The commit message should contain the release version and a description of changes.
 
-> Release 1.13.0 "Externality"
->
-> Changes:
->
-> - A system for latching and locking views
-> ...
+### 5. Update the NEWS file
 
-### 5. Create a signed tag for downstreams
+Summarize the changes since the last release in the NEWS file. Use the Markdown syntax, e.g.
+
+```
+1.13.0 "Externality"
+-----------------------------
+
+Changes:
+- A system for latching and locking views
+...
+```
+
+### 6. Commit changes
+
+Generate a commit message from the news file:
+
+```
+tools/make_message | git commit --file=- ...
+```
+
+If the commit message looks wrong, fix the NEWS file, and do `git commit --amend`.
+
+### 7. Create a signed tag for downstreams
 
 The tag should be the version number with "v" in front of it. The tag message should be "squeekboard" and the tag name. Push it to the upstream repository:
 
@@ -272,7 +288,7 @@ git tag -s -u my_address@example.com v1.13.0 -m "squeekboard v1.13.0"
 git push v1.13.0
 ```
 
-### 5. Create a signed tag for packaging
+### 8. Create a signed tag for packaging
 
 Similar to the above, but format it for the PureOS downstream.
 
@@ -281,6 +297,6 @@ git tag -s -u my_address@example.com 'pureos/1.13.0pureos0_amber0' -m 'squeekboa
 git push 'pureos/1.13.0pureos0_amber0'
 ```
 
-### 6. Rejoice
+### 9. Rejoice
 
 You released a new version of Squeekboard, and made it available on PureOS. Congratulations.
