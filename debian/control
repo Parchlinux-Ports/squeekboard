@@ -37,6 +37,8 @@ Homepage: https://source.puri.sm/Librem5/squeekboard
 Package: squeekboard
 Architecture: linux-any
 Depends:
+# for Greek polytonic readability
+ fonts-gfs-didot-classic,
 # for the Adwaita-dark theme
  gnome-themes-extra-data,
  ${shlibs:Depends},
