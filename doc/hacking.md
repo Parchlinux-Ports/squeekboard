@@ -288,15 +288,6 @@ git tag -s -u my_address@example.com v1.13.0 -m "squeekboard v1.13.0"
 git push v1.13.0
 ```
 
-### 8. Create a signed tag for packaging
-
-Similar to the above, but format it for the PureOS downstream.
-
-```
-git tag -s -u my_address@example.com 'pureos/1.13.0pureos0_amber0' -m 'squeekboard 1.13.0pureos0_amber0'
-git push 'pureos/1.13.0pureos0_amber0'
-```
-
-### 9. Rejoice
+### 8. Rejoice
 
 You released a new version of Squeekboard, and made it available on PureOS. Congratulations.
