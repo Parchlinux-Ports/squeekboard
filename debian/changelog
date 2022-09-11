@@ -1,3 +1,25 @@
+squeekboard (1.20.0-1) experimental; urgency=medium
+
+  [ Dorota Czaplejewicz ]
+  * state: Don't animate when force-hidden
+  * build: Use Cargo.lock included with the repo by default
+  * build: Update Cargo.lock.newer
+
+  [ Darren R ]
+  * added US Dvorak Terminal
+
+  [ Efstathios Iosifidis ]
+  * Add Greek translation
+
+  [ Goran Vidović ]
+  * Add Croatian translation
+
+  [ Sebastian Krzyszkowiak ]
+  * data: Set an icon in the desktop file
+  * data: Indicate that Squeekboard provides haptic feedback
+
+ -- Dorota Czaplejewicz <dorota.czaplejewicz@puri.sm>  Sat, 03 Sep 2022 14:21:57 +0000
+
 squeekboard (1.19.0-1) experimental; urgency=medium
 
   [ Dorota Czaplejewicz ]
