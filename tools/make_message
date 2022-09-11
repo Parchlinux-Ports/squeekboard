@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+"""Extracts commit message for the last release from NEWS.md file.
+"""
+
+from itertools import dropwhile
+import sys
+
+with open('NEWS.md') as f:
+    contents = f.readlines()
+
+    if contents[0].startswith('## '):
+        name = contents[0][3:]
+        contents = contents[1:]
+    elif contents[1].startswith('---'):
+        name = contents[0]
+        contents = contents[2:]
+    else:
+        raise ValueError("Can't find release name")
+    name = name.strip()
+
+print("Release", name)
+# git wants a single newline between commit title and message body
+print()
+# meanwhile, markdown ignores newlines after a title
+contents = dropwhile(lambda x: x.strip() == '', contents)
+
+# Need to look up forward
+contents = list(contents)
+
+for line, nextline in zip(contents, contents[1:] + ['']):
+    if nextline.startswith('---') or line.startswith('## '):
+        break
+    elif nextline.startswith('===') or line.startswith('# '):
+        raise ValueError("Encountered title instead of release section")
+    print(line.strip())
