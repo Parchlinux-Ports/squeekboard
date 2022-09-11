@@ -126,8 +126,8 @@ settings_get_layout(GSettings *settings, char **type, char **layout)
     g_variant_unref(inputs);
 }
 
-void eekboard_context_service_set_layout(EekboardContextService *context, struct squeek_layout *layout, uint32_t timestamp) {
-    LevelKeyboard *keyboard = level_keyboard_new(layout);
+void eekboard_context_service_set_layout(EekboardContextService *context, char *style_name, struct squeek_layout *layout, uint32_t timestamp) {
+    LevelKeyboard *keyboard = level_keyboard_new(style_name, layout);
     // set as current
     LevelKeyboard *previous_keyboard = context->keyboard;
     context->keyboard = keyboard;

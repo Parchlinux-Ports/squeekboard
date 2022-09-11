@@ -13,7 +13,8 @@ use glib::{Continue, MainContext, PRIORITY_DEFAULT, Receiver};
 
 mod c {
     use super::*;
-    use std::os::raw::c_void;
+    use std::ffi::CString;
+    use std::os::raw::{c_char, c_void};
     use std::ptr;
     use std::rc::Rc;
     use std::time::Instant;
@@ -83,7 +84,7 @@ mod c {
         #[allow(improper_ctypes)]
         fn init_wayland(wayland: *mut Wayland);
         #[allow(improper_ctypes)]
-        fn eekboard_context_service_set_layout(service: HintManager, layout: *const layout::Layout, timestamp: u32);
+        fn eekboard_context_service_set_layout(service: HintManager, name: *const c_char, layout: *const layout::Layout, timestamp: u32);
         // This should probably only get called from the gtk main loop,
         // given that dbus handler is using glib.
         fn dbus_handler_set_visible(dbus: *const DBusHandler, visible: u8);
@@ -187,10 +188,17 @@ mod c {
                 purpose,
             } = description;
             actors::popover::set_overlay(popover, overlay_name.clone());
-            let layout = loading::load_layout(name, kind, purpose, overlay_name);
+            let layout = loading::load_layout(&name, kind, purpose, &overlay_name);
             let layout = Box::into_raw(Box::new(layout));
+            // CSS can't express "+" in the class
+            let name = overlay_name.unwrap_or(name).replace('+', "_");
+            let name = CString::new(name).unwrap_or(
+                CString::new("").unwrap()
+            );
             unsafe {
-                eekboard_context_service_set_layout(hint_manager, layout, 0);
+                // Take out the pointer to a temp variable so that it outlives the set_layout call.
+                let name = name.as_ptr();
+                eekboard_context_service_set_layout(hint_manager, name, layout, 0);
             }
         }
     }

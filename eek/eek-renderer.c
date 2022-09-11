@@ -335,6 +335,7 @@ eek_renderer_new (LevelKeyboard  *keyboard,
     if (squeek_layout_get_kind(keyboard->layout) == ARRANGEMENT_KIND_WIDE) {
         gtk_style_context_add_class(renderer->view_context, "wide");
     }
+    gtk_style_context_add_class(renderer->view_context, (char*)&keyboard->style_name);
     gtk_style_context_add_provider (renderer->view_context,
         GTK_STYLE_PROVIDER(renderer->css_provider),
         GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);

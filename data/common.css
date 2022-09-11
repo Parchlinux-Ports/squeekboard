@@ -5,6 +5,12 @@ sq_view {
     font-size: 1.5em;
 }
 
+/* Becomes readable with a special font */
+sq_view.gr_polytonic {
+    font-family: GFSDidotClassic, cantarell, sans-serif;
+    font-size: 2em;
+}
+
 sq_button {
     border-radius: 4px;
     margin: 2px;
