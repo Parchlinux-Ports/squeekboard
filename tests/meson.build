@@ -89,7 +89,7 @@ foreach layout : [
     'pl', 'pl_wide',
     'ro', 'ro_wide',
     'ru',
-    'se',
+    'se', 'se_wide',
     'th', 'th_wide',
     'ua',
     'us+colemak', 'us+colemak_wide',
