@@ -127,3 +127,14 @@ foreach layout : [
 endforeach
 
 endif
+
+if get_option('find_orphans')
+    test('test_find_orphans',
+        cargo_script,
+        args: ['run'] + cargo_build_flags
+            + ['--example', 'find_orphan_layouts',
+                '--', meson.source_root() + '/data/keyboards/'],
+        timeout: timeout,
+        workdir: meson.build_root(),
+    )
+endif

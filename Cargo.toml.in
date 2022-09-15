@@ -16,6 +16,10 @@ path = "@path@/src/bin/test_layout.rs"
 name = "test_layout"
 path = "@path@/examples/test_layout.rs"
 
+[[example]]
+name = "find_orphan_layouts"
+path = "@path@/examples/find_orphan_layouts.rs"
+
 [features]
 glib_v0_14 = []
 
