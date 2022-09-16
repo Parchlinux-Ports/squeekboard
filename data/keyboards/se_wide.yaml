@@ -1,0 +1,164 @@
+---
+outlines:
+    default: { width: 50, height: 42 }
+    altline: { width: 81, height: 42 }
+    wide: { width: 108,  height: 42 }
+    spaceline: { width: 216, height: 42 }
+    special: { width: 60, height: 42 }
+ 
+
+views:
+    base:
+        - "q w e r t y u i o p å"
+        - "a s d f g h j k l ö ä"
+        - "Shift_L   z x c v b n m  BackSpace"
+        - "show_numbers preferences         space        .    Return"
+    upper:
+        - "Q W E R T Y U I O P Å"
+        - "A S D F G H J K L Ö Ä"
+        - "Shift_L   Z X C V B N M  BackSpace"
+        - "show_numbers preferences         space        .    Return"
+    numbers:
+        - "§ 1 2 3 4 5 6 7 8 9 0"
+        - "at numbersign EuroSign dollar percent ampersand minus underscore plus parenleft parenright"
+        - "show_symbols   comma quotedbl quoteright colon semicolon exclam question  BackSpace"
+        - "show_letters preferences         space        .    Return"
+    symbols:
+        - "µ asciitilde quoteleft bar U00B7 squareroot Greek_pi Greek_tau division multiply paragraph"
+        - "½ ¤ copyright U00AE U00A3 U00A5 asciicircum degree asterisk braceleft braceright"
+        - "show_numbers_from_symbols   backslash slash less greater equal bracketleft bracketright  BackSpace"
+        - "show_letters preferences         space        .    Return"
+
+buttons:
+    Shift_L:
+        action:
+            locking:
+                lock_view: "upper"
+                unlock_view: "base"
+        outline: "altline"
+        icon: "key-shift"
+    BackSpace:
+        outline: altline
+        icon: "edit-clear-symbolic"
+        action: erase
+    preferences:
+        action: "show_prefs"
+        outline: "special"
+        icon: "keyboard-mode-symbolic"
+    show_numbers:
+        outline: "wide"
+        action:
+            set_view: "numbers"
+        label: "123"
+    show_numbers_from_symbols:
+        action:
+            set_view: "numbers"
+        outline: altline
+        label: "123"
+    show_letters:
+        outline: "wide"
+        action:
+            set_view: "base"
+        label: "ABC"
+    show_symbols:
+        action:
+            set_view: "symbols"
+        outline: "altline"
+        label: "*/="
+    ".":
+        outline: "special"
+    space:
+        outline: spaceline
+        text: " "
+    Return:
+        outline: "wide"
+        icon: "key-enter"
+        keysym: "Return"
+    asterisk:
+        text: "*"
+    asciitilde:
+        text: "~"
+    quoteleft:
+        text: "`"
+    bar:
+        text: "|"
+    U00B7:
+        text: "·"
+    squareroot:
+        text: "√"
+    Greek_pi:
+        text: "π"
+    division:
+        text: "÷"
+    multiply:
+        text: "×"
+    paragraph:
+        text: "¶"
+    Greek_tau:
+        text: "τ"
+    copyright:
+        text: "©"
+    numbersign:
+        text: "#"
+    U00AE:
+        text: "®"
+    at:
+        text: "@"
+    dollar:
+        text: "$"
+    U00A3:
+        text: "£"
+    percent:
+        text: "%"
+    EuroSign:
+        text: "€"
+    ampersand:
+        text: "&"
+    U00A5:
+        text: "¥"
+    minus:
+        text: "-"
+    asciicircum:
+        text: "^"
+    underscore:
+        text: "_"
+    degree:
+        text: "°"
+    plus:
+        text: "+"
+    equal:
+        text: "="
+    parenleft:
+        text: "("
+    parenright:
+        text: ")"
+    braceleft:
+        text: "{"
+    braceright:
+        text: "}"
+    comma:
+        text: ","
+    backslash:
+        text: "\\"
+    slash:
+        text: "/"
+    quotedbl:
+        text: "\""
+    quoteright:
+        text: "'"
+    less:
+        text: "<"
+    greater:
+        text: ">"
+    colon:
+        text: ":"
+    semicolon:
+        text: ";"
+    exclam:
+        text: "!"
+    question:
+        text: "?"
+    bracketleft:
+        text: "["
+    bracketright:
+        text: "]"
