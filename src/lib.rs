@@ -39,7 +39,7 @@ mod outputs;
 mod panel;
 mod popover;
 mod receiver;
-mod resources;
+pub mod resources;
 mod state;
 mod style;
 mod submission;

@@ -32,7 +32,7 @@ build_meson:
   script:
     - mv debian/control-newer debian/control
     - apt-get -y build-dep .
-    - meson . _build/ -Ddepdatadir=/usr/share --werror
+    - meson . _build/ -Ddepdatadir=/usr/share -Dfind_orphans=true --werror
     - ninja -C _build install
   except:
     variables:
