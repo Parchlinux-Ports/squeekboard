@@ -157,7 +157,7 @@ impl Layout {
     }
 
     pub fn build<H: logging::Handler>(self, mut warning_handler: H)
-        -> (Result<::layout::LayoutData, FormattingError>, H)
+        -> (Result<::layout::LayoutParseData, FormattingError>, H)
     {
         let button_names = self.views.values()
             .flat_map(|rows| {
@@ -279,7 +279,7 @@ impl Layout {
         };
 
         (
-            Ok(::layout::LayoutData {
+            Ok(layout::LayoutParseData {
                 views: views,
                 keymaps: keymaps.into_iter().map(|keymap_str|
                     CString::new(keymap_str)

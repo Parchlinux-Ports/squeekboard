@@ -182,7 +182,7 @@ pub mod c {
         allocation_height: f64,
     ) -> Transformation {
         let layout = unsafe { &*layout };
-        layout.calculate_transformation(Size {
+        layout.shape.calculate_transformation(Size {
             width: allocation_width,
             height: allocation_height,
         })
@@ -192,14 +192,14 @@ pub mod c {
     pub extern "C"
     fn squeek_layout_get_kind(layout: *const Layout) -> u32 {
         let layout = unsafe { &*layout };
-        layout.kind.clone() as u32
+        layout.shape.kind.clone() as u32
     }
 
     #[no_mangle]
     pub extern "C"
     fn squeek_layout_get_purpose(layout: *const Layout) -> u32 {
         let layout = unsafe { &*layout };
-        layout.purpose.clone() as u32
+        layout.shape.purpose.clone() as u32
     }
 
     #[no_mangle]
@@ -654,28 +654,15 @@ pub enum LatchedState {
     Not,
 }
 
-// TODO: split into sth like
-// Arrangement (views) + details (keymap) + State (keys)
-/// State of the UI, contains the backend as well
+/// Associates the state of a layout with its definition.
+/// Contains everything necessary to present this layout to the user
+/// and to determine its reactions to inputs.
 pub struct Layout {
     pub state: LayoutState,
-
-    pub margins: Margins,
-    pub kind: ArrangementKind,
-    pub purpose: ContentPurpose,
-
-    // Views own the actual buttons which have state
-    // Maybe they should own UI only,
-    // and keys should be owned by a dedicated non-UI-State?
-    /// Point is the offset within the layout
-    pub views: HashMap<String, (c::Point, View)>,
-
-    // Non-UI stuff
-    /// xkb keymaps applicable to the contained keys. Unchangeable
-    pub keymaps: Vec<CString>,
+    pub shape: LayoutData,
 }
 
-/// Changeable state that can't be derived from the definition of the layout
+/// Changeable state that can't be derived from the definition of the layout.
 pub struct LayoutState {
     pub current_view: String,
 
@@ -694,11 +681,29 @@ pub struct LayoutState {
 }
 
 /// A builder structure for picking up layout data from storage
-pub struct LayoutData {
+pub struct LayoutParseData {
     /// Point is the offset within layout
     pub views: HashMap<String, (c::Point, View)>,
+    /// xkb keymaps applicable to the contained keys
     pub keymaps: Vec<CString>,
     pub margins: Margins,
+}
+
+/// Static, cacheable information for the layout
+pub struct LayoutData {
+    pub margins: Margins,
+    pub kind: ArrangementKind,
+    pub purpose: ContentPurpose,
+
+    // Views own the actual buttons which have state
+    // Maybe they should own UI only,
+    // and keys should be owned by a dedicated non-UI-State?
+    /// Point is the offset within the layout
+    pub views: HashMap<String, (c::Point, View)>,
+
+    // Non-UI stuff
+    /// xkb keymaps applicable to the contained keys. Unchangeable
+    pub keymaps: Vec<CString>,
 }
 
 #[derive(Debug)]
@@ -710,50 +715,8 @@ impl fmt::Display for NoSuchView {
     }
 }
 
-// Unfortunately, changes are not atomic due to mutability :(
-// An error will not be recoverable
-// The usage of &mut on Rc<RefCell<KeyState>> doesn't mean anything special.
-// Cloning could also be used.
-impl Layout {
-    pub fn new(data: LayoutData, kind: ArrangementKind, purpose: ContentPurpose) -> Layout {
-        Layout {
-            kind,
-            views: data.views,
-            keymaps: data.keymaps,
-            margins: data.margins,
-            purpose,
-            state: LayoutState {
-                current_view: "base".to_owned(),
-                view_latched: LatchedState::Not,
-                pressed_keys: HashSet::new(),
-            },
-        }
-    }
 
-    pub fn get_current_view_position(&self) -> &(c::Point, View) {
-        &self.views
-            .get(&self.state.current_view).expect("Selected nonexistent view")
-    }
-
-    pub fn get_current_view(&self) -> &View {
-        &self.views.get(&self.state.current_view).expect("Selected nonexistent view").1
-    }
-
-    fn set_view(&mut self, view: String) -> Result<(), NoSuchView> {
-        if self.views.contains_key(&view) {
-            self.state.current_view = view;
-            Ok(())
-        } else {
-            Err(NoSuchView)
-        }
-    }
-
-    // Layout is passed around mutably,
-    // so better keep the field away from direct access.
-    pub fn get_view_latched(&self) -> &LatchedState {
-        &self.state.view_latched
-    }
-
+impl LayoutData {
     /// Calculates size without margins
     fn calculate_inner_size(&self) -> Size {
         View::calculate_super_size(
@@ -796,6 +759,53 @@ impl Layout {
             scale_x: 1.0,
             scale_y: 1.0,
         })
+    }
+}
+
+// Unfortunately, changes are not atomic due to mutability :(
+// An error will not be recoverable
+// The usage of &mut on Rc<RefCell<KeyState>> doesn't mean anything special.
+// Cloning could also be used.
+impl Layout {
+    pub fn new(data: LayoutParseData, kind: ArrangementKind, purpose: ContentPurpose) -> Layout {
+        Layout {
+            shape: LayoutData {
+                kind,
+                views: data.views,
+                keymaps: data.keymaps,
+                margins: data.margins,
+                purpose,
+            },
+            state: LayoutState {
+                current_view: "base".to_owned(),
+                view_latched: LatchedState::Not,
+                pressed_keys: HashSet::new(),
+            },
+        }
+    }
+
+    pub fn get_current_view_position(&self) -> &(c::Point, View) {
+        &self.shape.views
+            .get(&self.state.current_view).expect("Selected nonexistent view")
+    }
+
+    pub fn get_current_view(&self) -> &View {
+        &self.shape.views.get(&self.state.current_view).expect("Selected nonexistent view").1
+    }
+
+    fn set_view(&mut self, view: String) -> Result<(), NoSuchView> {
+        if self.shape.views.contains_key(&view) {
+            self.state.current_view = view;
+            Ok(())
+        } else {
+            Err(NoSuchView)
+        }
+    }
+
+    // Layout is passed around mutably,
+    // so better keep the field away from direct access.
+    pub fn get_view_latched(&self) -> &LatchedState {
+        &self.state.view_latched
     }
 
     fn find_button_by_position(&self, point: c::Point) -> Option<ButtonPlace> {
@@ -1232,22 +1242,24 @@ mod test {
                 view_latched: LatchedState::Not,
                 pressed_keys: HashSet::new(),
             },
-            keymaps: Vec::new(),
-            kind: ArrangementKind::Base,
-            margins: Margins {
-                top: 0.0,
-                left: 0.0,
-                right: 0.0,
-                bottom: 0.0,
+            shape: LayoutData {
+                keymaps: Vec::new(),
+                kind: ArrangementKind::Base,
+                margins: Margins {
+                    top: 0.0,
+                    left: 0.0,
+                    right: 0.0,
+                    bottom: 0.0,
+                },
+                views: hashmap! {
+                    // Both can use the same structure.
+                    // Switching doesn't depend on the view shape
+                    // as long as the switching button is present.
+                    "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view),
+                },
+                purpose: ContentPurpose::Normal,
             },
-            views: hashmap! {
-                // Both can use the same structure.
-                // Switching doesn't depend on the view shape
-                // as long as the switching button is present.
-                "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view),
-            },
-            purpose: ContentPurpose::Normal,
         };
 
         // Basic cycle
@@ -1310,23 +1322,25 @@ mod test {
                 view_latched: LatchedState::Not,
                 pressed_keys: HashSet::new(),
             },
-            keymaps: Vec::new(),
-            kind: ArrangementKind::Base,
-            margins: Margins {
-                top: 0.0,
-                left: 0.0,
-                right: 0.0,
-                bottom: 0.0,
+            shape: LayoutData {
+                keymaps: Vec::new(),
+                kind: ArrangementKind::Base,
+                margins: Margins {
+                    top: 0.0,
+                    left: 0.0,
+                    right: 0.0,
+                    bottom: 0.0,
+                },
+                views: hashmap! {
+                    // Both can use the same structure.
+                    // Switching doesn't depend on the view shape
+                    // as long as the switching button is present.
+                    "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "unlocked".into() => (c::Point { x: 0.0, y: 0.0 }, view),
+                },
+                purpose: ContentPurpose::Normal,
             },
-            views: hashmap! {
-                // Both can use the same structure.
-                // Switching doesn't depend on the view shape
-                // as long as the switching button is present.
-                "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "unlocked".into() => (c::Point { x: 0.0, y: 0.0 }, view),
-            },
-            purpose: ContentPurpose::Normal,
         };
 
         layout.apply_view_transition(&switch);
@@ -1379,23 +1393,25 @@ mod test {
                 view_latched: LatchedState::Not,
                 pressed_keys: HashSet::new(),
             },
-            keymaps: Vec::new(),
-            kind: ArrangementKind::Base,
-            margins: Margins {
-                top: 0.0,
-                left: 0.0,
-                right: 0.0,
-                bottom: 0.0,
+            shape: LayoutData {
+                keymaps: Vec::new(),
+                kind: ArrangementKind::Base,
+                margins: Margins {
+                    top: 0.0,
+                    left: 0.0,
+                    right: 0.0,
+                    bottom: 0.0,
+                },
+                views: hashmap! {
+                    // All can use the same structure.
+                    // Switching doesn't depend on the view shape
+                    // as long as the switching button is present.
+                    "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "ĄĘ".into() => (c::Point { x: 0.0, y: 0.0 }, view),
+                },
+                purpose: ContentPurpose::Normal,
             },
-            views: hashmap! {
-                // All can use the same structure.
-                // Switching doesn't depend on the view shape
-                // as long as the switching button is present.
-                "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "ĄĘ".into() => (c::Point { x: 0.0, y: 0.0 }, view),
-            },
-            purpose: ContentPurpose::Normal,
         };
 
         // Latch twice, then Ąto-unlatch across 2 levels
@@ -1480,12 +1496,7 @@ mod test {
                 )]),
             ),
         ]);
-        let layout = Layout {
-            state: LayoutState {
-                current_view: String::new(),
-                view_latched: LatchedState::Not,
-                pressed_keys: HashSet::new(),
-            },
+        let layout = LayoutData {
             keymaps: Vec::new(),
             kind: ArrangementKind::Base,
             // Lots of bottom margin
@@ -1535,12 +1546,7 @@ mod test {
                 )]),
             ),
         ]);
-        let layout = Layout {
-            state: LayoutState {
-                current_view: String::new(),
-                view_latched: LatchedState::Not,
-                pressed_keys: HashSet::new(),
-            },
+        let layout = LayoutData {
             keymaps: Vec::new(),
             kind: ArrangementKind::Base,
             margins: Margins {
