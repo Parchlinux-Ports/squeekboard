@@ -91,7 +91,7 @@ mod c {
                 &state.action,
                 &active_modifiers,
                 layout.get_view_latched(),
-                &layout.current_view,
+                &layout.state.current_view,
             );
             if state.pressed == keyboard::PressType::Pressed
                 || locked != LockedStyle::Free

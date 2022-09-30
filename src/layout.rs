@@ -238,7 +238,7 @@ pub mod c {
 
             // The list must be copied,
             // because it will be mutated in the loop
-            for key in layout.pressed_keys.clone() {
+            for key in layout.state.pressed_keys.clone() {
                 let key: &Rc<RefCell<KeyState>> = key.borrow();
                 seat::handle_release_key(
                     layout,
@@ -265,7 +265,7 @@ pub mod c {
             let mut submission = submission.borrow_mut();
             // The list must be copied,
             // because it will be mutated in the loop
-            for key in layout.pressed_keys.clone() {
+            for key in layout.state.pressed_keys.clone() {
                 let key: &Rc<RefCell<KeyState>> = key.borrow();
                 seat::handle_release_key(
                     layout,
@@ -344,7 +344,7 @@ pub mod c {
                 Point { x: x_widget, y: y_widget }
             );
 
-            let pressed = layout.pressed_keys.clone();
+            let pressed = layout.state.pressed_keys.clone();
             let button_info = {
                 let place = layout.find_button_by_position(point);
                 place.map(|place| {(
@@ -658,15 +658,11 @@ pub enum LatchedState {
 // Arrangement (views) + details (keymap) + State (keys)
 /// State of the UI, contains the backend as well
 pub struct Layout {
+    pub state: LayoutState,
+
     pub margins: Margins,
     pub kind: ArrangementKind,
     pub purpose: ContentPurpose,
-    pub current_view: String,
-
-    // If current view is latched,
-    // clicking any button that emits an action (erase, submit, set modifier)
-    // will cause lock buttons to unlatch.
-    view_latched: LatchedState,
 
     // Views own the actual buttons which have state
     // Maybe they should own UI only,
@@ -677,7 +673,16 @@ pub struct Layout {
     // Non-UI stuff
     /// xkb keymaps applicable to the contained keys. Unchangeable
     pub keymaps: Vec<CString>,
-    // Changeable state
+}
+
+/// Changeable state that can't be derived from the definition of the layout
+pub struct LayoutState {
+    pub current_view: String,
+
+    // If current view is latched,
+    // clicking any button that emits an action (erase, submit, set modifier)
+    // will cause lock buttons to unlatch.
+    view_latched: LatchedState,
     // a Vec would be enough, but who cares, this will be small & fast enough
     // TODO: turn those into per-input point *_buttons to track dragging.
     // The renderer doesn't need the list of pressed keys any more,
@@ -713,28 +718,30 @@ impl Layout {
     pub fn new(data: LayoutData, kind: ArrangementKind, purpose: ContentPurpose) -> Layout {
         Layout {
             kind,
-            current_view: "base".to_owned(),
-            view_latched: LatchedState::Not,
             views: data.views,
             keymaps: data.keymaps,
-            pressed_keys: HashSet::new(),
             margins: data.margins,
             purpose,
+            state: LayoutState {
+                current_view: "base".to_owned(),
+                view_latched: LatchedState::Not,
+                pressed_keys: HashSet::new(),
+            },
         }
     }
 
     pub fn get_current_view_position(&self) -> &(c::Point, View) {
         &self.views
-            .get(&self.current_view).expect("Selected nonexistent view")
+            .get(&self.state.current_view).expect("Selected nonexistent view")
     }
 
     pub fn get_current_view(&self) -> &View {
-        &self.views.get(&self.current_view).expect("Selected nonexistent view").1
+        &self.views.get(&self.state.current_view).expect("Selected nonexistent view").1
     }
 
     fn set_view(&mut self, view: String) -> Result<(), NoSuchView> {
         if self.views.contains_key(&view) {
-            self.current_view = view;
+            self.state.current_view = view;
             Ok(())
         } else {
             Err(NoSuchView)
@@ -744,7 +751,7 @@ impl Layout {
     // Layout is passed around mutably,
     // so better keep the field away from direct access.
     pub fn get_view_latched(&self) -> &LatchedState {
-        &self.view_latched
+        &self.state.view_latched
     }
 
     /// Calculates size without margins
@@ -816,8 +823,8 @@ impl Layout {
     ) {
         let (transition, new_latched) = Layout::process_action_for_view(
             action,
-            &self.current_view,
-            &self.view_latched,
+            &self.state.current_view,
+            &self.state.view_latched,
         );
 
         match transition {
@@ -826,15 +833,15 @@ impl Layout {
             ViewTransition::NoChange => {},
         };
 
-        self.view_latched = new_latched;
+        self.state.view_latched = new_latched;
     }
 
     /// Unlatch all latched keys,
     /// so that the new view is the one before first press.
     fn unstick_locks(&mut self) {
-        if let LatchedState::FromView(name) = self.view_latched.clone() {
+        if let LatchedState::FromView(name) = self.state.view_latched.clone() {
             match self.set_view(name.clone()) {
-                Ok(_) => { self.view_latched = LatchedState::Not; }
+                Ok(_) => { self.state.view_latched = LatchedState::Not; }
                 Err(e) => log_print!(
                     logging::Level::Bug,
                     "Bad view {}, can't unlatch ({:?})",
@@ -1004,7 +1011,7 @@ mod seat {
         time: Timestamp,
         rckey: &Rc<RefCell<KeyState>>,
     ) {
-        if !layout.pressed_keys.insert(::util::Pointer(rckey.clone())) {
+        if !layout.state.pressed_keys.insert(::util::Pointer(rckey.clone())) {
             log_print!(
                 logging::Level::Bug,
                 "Key {:?} was already pressed", rckey,
@@ -1118,7 +1125,7 @@ mod seat {
 
         let pointer = ::util::Pointer(rckey.clone());
         // Apply state changes
-        layout.pressed_keys.remove(&pointer);
+        layout.state.pressed_keys.remove(&pointer);
         // Commit activated button state changes
         RefCell::replace(rckey, key);
     }
@@ -1220,11 +1227,13 @@ mod test {
         )]);
 
         let mut layout = Layout {
-            current_view: "base".into(),
-            view_latched: LatchedState::Not,
+            state: LayoutState {
+                current_view: "base".into(),
+                view_latched: LatchedState::Not,
+                pressed_keys: HashSet::new(),
+            },
             keymaps: Vec::new(),
             kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
             margins: Margins {
                 top: 0.0,
                 left: 0.0,
@@ -1243,18 +1252,18 @@ mod test {
 
         // Basic cycle
         layout.apply_view_transition(&switch);
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&switch);
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&submit);
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&switch);
-        assert_eq!(&layout.current_view, "base");
+        assert_eq!(&layout.state.current_view, "base");
         layout.apply_view_transition(&switch);
         // Unlatch
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&submit);
-        assert_eq!(&layout.current_view, "base");
+        assert_eq!(&layout.state.current_view, "base");
     }
 
     #[test]
@@ -1296,11 +1305,13 @@ mod test {
         )]);
 
         let mut layout = Layout {
-            current_view: "base".into(),
-            view_latched: LatchedState::Not,
+            state: LayoutState {
+                current_view: "base".into(),
+                view_latched: LatchedState::Not,
+                pressed_keys: HashSet::new(),
+            },
             keymaps: Vec::new(),
             kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
             margins: Margins {
                 top: 0.0,
                 left: 0.0,
@@ -1319,9 +1330,9 @@ mod test {
         };
 
         layout.apply_view_transition(&switch);
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&unswitch);
-        assert_eq!(&layout.current_view, "unlocked");
+        assert_eq!(&layout.state.current_view, "unlocked");
     }
 
     #[test]
@@ -1363,11 +1374,13 @@ mod test {
         )]);
 
         let mut layout = Layout {
-            current_view: "base".into(),
-            view_latched: LatchedState::Not,
+            state: LayoutState {
+                current_view: "base".into(),
+                view_latched: LatchedState::Not,
+                pressed_keys: HashSet::new(),
+            },
             keymaps: Vec::new(),
             kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
             margins: Margins {
                 top: 0.0,
                 left: 0.0,
@@ -1387,14 +1400,14 @@ mod test {
 
         // Latch twice, then Ąto-unlatch across 2 levels
         layout.apply_view_transition(&switch);
-        println!("{:?}", layout.view_latched);
-        assert_eq!(&layout.current_view, "locked");
+        println!("{:?}", layout.state.view_latched);
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&switch_again);
-        println!("{:?}", layout.view_latched);
-        assert_eq!(&layout.current_view, "ĄĘ");
+        println!("{:?}", layout.state.view_latched);
+        assert_eq!(&layout.state.current_view, "ĄĘ");
         layout.apply_view_transition(&submit);
-        println!("{:?}", layout.view_latched);
-        assert_eq!(&layout.current_view, "base");
+        println!("{:?}", layout.state.view_latched);
+        assert_eq!(&layout.state.current_view, "base");
     }
 
     #[test]
@@ -1468,11 +1481,13 @@ mod test {
             ),
         ]);
         let layout = Layout {
-            current_view: String::new(),
-            view_latched: LatchedState::Not,
+            state: LayoutState {
+                current_view: String::new(),
+                view_latched: LatchedState::Not,
+                pressed_keys: HashSet::new(),
+            },
             keymaps: Vec::new(),
             kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
             // Lots of bottom margin
             margins: Margins {
                 top: 0.0,
@@ -1521,11 +1536,13 @@ mod test {
             ),
         ]);
         let layout = Layout {
-            current_view: String::new(),
-            view_latched: LatchedState::Not,
+            state: LayoutState {
+                current_view: String::new(),
+                view_latched: LatchedState::Not,
+                pressed_keys: HashSet::new(),
+            },
             keymaps: Vec::new(),
             kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
             margins: Margins {
                 top: 0.0,
                 left: 0.0,
