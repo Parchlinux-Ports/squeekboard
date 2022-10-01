@@ -1070,15 +1070,13 @@ pub struct UIBackend {
 mod seat {
     use super::*;
 
-    pub fn handle_press_key(
-        layout: &mut Layout,
+    fn handle_press_key_cleaner(
+        shape: &LayoutData,
         submission: &mut Submission,
         time: Timestamp,
         button_pos: &ButtonPosition,
     ) {
-        let find = layout.state.active_buttons.get(button_pos);
-
-        let button = layout.shape.get_button(button_pos).unwrap();
+        let button = shape.get_button(button_pos).unwrap();
         let action = button.action.clone();
         match action {
             Action::Submit {
@@ -1107,7 +1105,19 @@ mod seat {
             ),
             _ => {},
         };
-        
+    }
+    
+    pub fn handle_press_key(
+        layout: &mut Layout,
+        submission: &mut Submission,
+        time: Timestamp,
+        button_pos: &ButtonPosition,
+    ) {
+        // Send messages
+        handle_press_key_cleaner(&layout.shape, submission, time, button_pos);
+    
+        // Update state
+        let find = layout.state.active_buttons.get(button_pos);
         if let KeyState { pressed: PressType::Pressed } = find {
             log_print!(
                 logging::Level::Bug,
