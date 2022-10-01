@@ -2,14 +2,13 @@
  * Regards the keyboard as if it was composed of switches. */
 
 use crate::action::Action;
+use crate::layout;
 use crate::util;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::io;
 use std::mem;
 use std::ptr;
-use std::rc::Rc;
 use std::string::FromUtf8Error;
 
 // Traits
@@ -48,9 +47,16 @@ bitflags!{
 }
 
 /// When the submitted actions of keys need to be tracked,
-/// they need a stable, comparable ID
+/// they need a stable, comparable ID.
+/// With layout::ButtonPosition, the IDs are unique within layouts.
 #[derive(Clone, PartialEq)]
-pub struct KeyStateId(*const KeyState);
+pub struct KeyStateId(layout::ButtonPosition);
+
+impl From<&layout::ButtonPosition> for KeyStateId {
+    fn from(v: &layout::ButtonPosition) -> Self {
+        Self(v.clone())
+    }
+}
 
 #[derive(Clone)]
 pub struct Key {
@@ -80,12 +86,6 @@ impl KeyState {
             pressed: PressType::Pressed,
             ..self
         }
-    }
-
-    /// KeyStates instances are the unique identifiers of pressed keys,
-    /// and the actions submitted with them.
-    pub fn get_id(keystate: &Rc<RefCell<KeyState>>) -> KeyStateId {
-        KeyStateId(keystate.as_ptr() as *const KeyState)
     }
 }
 

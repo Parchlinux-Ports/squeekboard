@@ -4,12 +4,10 @@
 
 /*! Parsing of the data files containing layouts */
 
-use std::cell::RefCell;
 use std::collections::{ HashMap, HashSet };
 use std::ffi::CString;
 use std::fs;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::vec::Vec;
 
 use xkbcommon::xkb;
@@ -18,8 +16,7 @@ use super::{ Error, LoadError };
 
 use ::action;
 use crate::keyboard::{
-    Key, KeyState, PressType,
-    generate_keymaps, generate_keycodes, KeyCode, FormattingError
+    Key, generate_keymaps, generate_keycodes, KeyCode, FormattingError
 };
 use ::layout;
 use ::logging;
@@ -517,9 +514,6 @@ fn create_button<H: logging::Handler>(
         label: label,
         action: data.action,
         keycodes: data.keycodes,
-        state: Rc::new(
-            RefCell::new(KeyState { pressed: PressType::Released })
-        ),
     }
 }
 
