@@ -105,7 +105,7 @@ mod c {
                 render_button_at_position(
                     renderer, &cr,
                     offset,
-                    button.as_ref(),
+                    button,
                     state.pressed, locked,
                 );
             }
@@ -126,7 +126,7 @@ mod c {
             render_button_at_position(
                 renderer, &cr,
                 offset,
-                button.as_ref(),
+                button,
                 keyboard::PressType::Released,
                 LockedStyle::Free,
             );

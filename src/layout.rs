@@ -473,14 +473,14 @@ impl Button {
 pub struct Row {
     /// Buttons together with their offset from the left relative to the row.
     /// ie. the first button always start at 0.
-    buttons: Vec<(f64, Box<Button>)>,
+    buttons: Vec<(f64, Button)>,
 
     /// Total size of the row
     size: Size,
 }
 
 impl Row {
-    pub fn new(buttons: Vec<(f64, Box<Button>)>) -> Row {
+    pub fn new(buttons: Vec<(f64, Button)>) -> Row {
         // Make sure buttons are sorted by offset.
         debug_assert!({
             let mut sorted = buttons.clone();
@@ -506,14 +506,14 @@ impl Row {
         self.size.clone()
     }
 
-    pub fn get_buttons(&self) -> &Vec<(f64, Box<Button>)> {
+    pub fn get_buttons(&self) -> &Vec<(f64, Button)> {
         &self.buttons
     }
 
     /// Finds the first button that covers the specified point
     /// relative to row's position's origin.
     /// Returns its index too.
-    fn find_button_by_position(&self, x: f64) -> (&Box<Button>, usize)
+    fn find_button_by_position(&self, x: f64) -> (&Button, usize)
     {
         // Buttons are sorted so we can use a binary search to find the clicked
         // button. Note this doesn't check whether the point is actually within
@@ -880,7 +880,7 @@ impl Layout {
 
     /// Returns index within current view too.
     pub fn foreach_visible_button<F>(&self, mut f: F)
-        where F: FnMut(c::Point, &Box<Button>, (usize, usize))
+        where F: FnMut(c::Point, &Button, (usize, usize))
     {
         let (view_offset, view) = self.get_current_view_position();
         let rows = view.get_rows().iter().enumerate();
@@ -1008,7 +1008,7 @@ fn try_set_view(layout: &mut Layout, view_name: &str) {
 mod procedures {
     use super::*;
 
-    type Place<'v> = (c::Point, &'v Box<Button>);
+    type Place<'v> = (c::Point, &'v Button);
 
     /// Finds the canvas offset of the button.
     pub fn find_button_place<'v>(
@@ -1033,7 +1033,7 @@ mod procedures {
         /// Checks indexing of buttons
         #[test]
         fn view_has_button() {
-            let button = Box::new(make_button("1".into()));
+            let button = make_button("1".into());
 
             let row = Row::new(vec!((0.1, button)));
 
@@ -1043,7 +1043,7 @@ mod procedures {
                 find_button_place(&view, (0, 0)),
                 Some((
                     c::Point { x: 0.1, y: 1.2 },
-                    &Box::new(make_button("1".into())),
+                    &make_button("1".into()),
                 ))
             );
 
@@ -1196,7 +1196,6 @@ mod test {
     use super::*;
 
     use std::ffi::CString;
-    use crate::keyboard::{PressType, KeyState};
 
     pub fn make_button(
         name: String,
@@ -1257,17 +1256,17 @@ mod test {
             Row::new(vec![
                 (
                     0.0,
-                    Box::new(Button {
+                    Button {
                         action: switch.clone(),
                         ..make_button("switch".into())
-                    }),
+                    },
                 ),
                 (
                     1.0,
-                    Box::new(Button {
+                    Button {
                         action: submit.clone(),
                         ..make_button("submit".into())
-                    }),
+                    },
                 ),
             ]),
         )]);
@@ -1337,17 +1336,17 @@ mod test {
             Row::new(vec![
                 (
                     0.0,
-                    Box::new(Button {
+                    Button {
                         action: switch.clone(),
                         ..make_button("switch".into())
-                    }),
+                    },
                 ),
                 (
                     1.0,
-                    Box::new(Button {
+                    Button {
                         action: submit.clone(),
                         ..make_button("submit".into())
-                    }),
+                    },
                 ),
             ]),
         )]);
@@ -1408,17 +1407,17 @@ mod test {
             Row::new(vec![
                 (
                     0.0,
-                    Box::new(Button {
+                    Button {
                         action: switch.clone(),
                         ..make_button("switch".into())
-                    }),
+                    },
                 ),
                 (
                     1.0,
-                    Box::new(Button {
+                    Button {
                         action: submit.clone(),
                         ..make_button("submit".into())
-                    }),
+                    },
                 ),
             ]),
         )]);
@@ -1472,17 +1471,17 @@ mod test {
                 Row::new(vec![
                     (
                         0.0,
-                        Box::new(Button {
+                        Button {
                             size: Size { width: 5.0, height: 10.0 },
                             ..make_button("A".into())
-                        }),
+                        },
                     ),
                     (
                         5.0,
-                        Box::new(Button {
+                        Button {
                             size: Size { width: 5.0, height: 10.0 },
                             ..make_button("B".into())
-                        }),
+                        },
                     ),
                 ]),
             ),
@@ -1491,10 +1490,10 @@ mod test {
                 Row::new(vec![
                     (
                         0.0,
-                        Box::new(Button {
+                        Button {
                             size: Size { width: 30.0, height: 10.0 },
                             ..make_button("bar".into())
-                        }),
+                        },
                     ),
                 ]),
             )
@@ -1525,10 +1524,10 @@ mod test {
                 0.0,
                 Row::new(vec![(
                     0.0,
-                    Box::new(Button {
+                    Button {
                         size: Size { width: 1.0, height: 1.0 },
                         ..make_button("foo".into())
-                    }),
+                    },
                 )]),
             ),
         ]);
@@ -1575,10 +1574,10 @@ mod test {
                 0.0,
                 Row::new(vec![(
                     0.0,
-                    Box::new(Button {
+                    Button {
                         size: Size { width: 1.0, height: 1.0 },
                         ..make_button("foo".into())
-                    }),
+                    },
                 )]),
             ),
         ]);

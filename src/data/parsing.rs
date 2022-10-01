@@ -224,7 +224,7 @@ impl Layout {
                 let rows = view.iter().map(|row| {
                     let buttons = row.split_ascii_whitespace()
                         .map(|name| {
-                            Box::new(create_button(
+                            create_button(
                                 &self.buttons,
                                 &self.outlines,
                                 name,
@@ -232,7 +232,7 @@ impl Layout {
                                     .expect("Button state not created")
                                     .clone(),
                                 &mut warning_handler,
-                            ))
+                            )
                         });
                     layout::Row::new(
                         add_offsets(
