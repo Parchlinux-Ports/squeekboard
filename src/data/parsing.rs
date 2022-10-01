@@ -17,13 +17,12 @@ use xkbcommon::xkb;
 use super::{ Error, LoadError };
 
 use ::action;
-use ::keyboard::{
-    KeyState, PressType,
+use crate::keyboard::{
+    Key, KeyState, PressType,
     generate_keymaps, generate_keycodes, KeyCode, FormattingError
 };
 use ::layout;
 use ::logging;
-use ::util::hash_map_map;
 use ::resources;
 
 // traits, derives
@@ -183,7 +182,7 @@ impl Layout {
             extract_symbol_names(&button_actions)
         );
 
-        let button_states = HashMap::<String, KeyState>::from_iter(
+        let button_states = HashMap::<String, Key>::from_iter(
             button_actions.into_iter().map(|(name, action)| {
                 let keycodes = match &action {
                     ::action::Action::Submit { text: _, keys } => {
@@ -208,8 +207,7 @@ impl Layout {
                 };
                 (
                     name.into(),
-                    KeyState {
-                        pressed: PressType::Released,
+                    Key {
                         keycodes,
                         action,
                     }
@@ -222,13 +220,7 @@ impl Layout {
             Ok(v) => v,
         };
 
-        let button_states_cache = hash_map_map(
-            button_states,
-            |name, state| {(
-                name,
-                Rc::new(RefCell::new(state))
-            )}
-        );
+        let button_states_cache = button_states;
 
         let views: Vec<_> = self.views.iter()
             .map(|(name, view)| {
@@ -461,7 +453,7 @@ fn create_button<H: logging::Handler>(
     button_info: &HashMap<String, ButtonMeta>,
     outlines: &HashMap<String, Outline>,
     name: &str,
-    state: Rc<RefCell<KeyState>>,
+    data: Key,
     warning_handler: &mut H,
 ) -> ::layout::Button {
     let cname = CString::new(name.clone())
@@ -523,7 +515,11 @@ fn create_button<H: logging::Handler>(
             height: outline.height,
         },
         label: label,
-        state: state,
+        action: data.action,
+        keycodes: data.keycodes,
+        state: Rc::new(
+            RefCell::new(KeyState { pressed: PressType::Released })
+        ),
     }
 }
 
@@ -677,7 +673,6 @@ mod tests {
             out.views["base"].1
                 .get_rows()[0].1
                 .get_buttons()[0].1
-                .state.borrow()
                 .keycodes.len(),
             2
         );
@@ -694,7 +689,6 @@ mod tests {
             out.views["base"].1
                 .get_rows()[0].1
                 .get_buttons()[0].1
-                .state.borrow()
                 .keycodes.len(),
             1
         );

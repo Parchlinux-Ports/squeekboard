@@ -109,8 +109,7 @@ fn check_layout(layout: Layout, allow_missing_return: bool) {
     for (_pos, view) in layout.views.values() {
         for (_y, row) in view.get_rows() {
             for (_x, button) in row.get_buttons() {
-                let keystate = button.state.borrow();
-                for keycode in &keystate.keycodes {
+                for keycode in &button.keycodes {
                     match xkb_states[keycode.keymap_idx].key_get_one_sym(keycode.code) {
                         xkb::KEY_NoSymbol => {
                             eprintln!(

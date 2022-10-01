@@ -1,6 +1,8 @@
 /*! State of the emulated keyboard and keys.
  * Regards the keyboard as if it was composed of switches. */
 
+use crate::action::Action;
+use crate::util;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
@@ -9,9 +11,6 @@ use std::mem;
 use std::ptr;
 use std::rc::Rc;
 use std::string::FromUtf8Error;
-
-use ::action::Action;
-use ::util;
 
 // Traits
 use std::io::Write;
@@ -24,7 +23,7 @@ pub enum PressType {
 }
 
 /// The extended, unambiguous layout-keycode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeyCode {
     pub code: u32,
     pub keymap_idx: usize,
@@ -53,13 +52,17 @@ bitflags!{
 #[derive(Clone, PartialEq)]
 pub struct KeyStateId(*const KeyState);
 
-#[derive(Debug, Clone)]
-pub struct KeyState {
-    pub pressed: PressType,
+#[derive(Clone)]
+pub struct Key {
     /// A cache of raw keycodes derived from Action::Submit given a keymap
     pub keycodes: Vec<KeyCode>,
     /// Static description of what the key does when pressed or released
     pub action: Action,
+}
+
+#[derive(Debug, Clone)]
+pub struct KeyState {
+    pub pressed: PressType,
 }
 
 impl KeyState {

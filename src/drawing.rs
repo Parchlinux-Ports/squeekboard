@@ -88,7 +88,7 @@ mod c {
             let state = RefCell::borrow(&button.state).clone();
 
             let locked = LockedStyle::from_action(
-                &state.action,
+                &button.action,
                 &active_modifiers,
                 layout.get_view_latched(),
                 &layout.state.current_view,

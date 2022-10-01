@@ -29,7 +29,7 @@ use crate::action::Action;
 use crate::actors;
 use crate::drawing;
 use crate::float_ord::FloatOrd;
-use crate::keyboard::KeyState;
+use crate::keyboard::{KeyState, KeyCode};
 use crate::logging;
 use crate::popover;
 use crate::receiver;
@@ -466,7 +466,7 @@ pub enum Label {
     IconName(CString),
 }
 
-/// The graphical representation of a button
+/// The definition of an interactive button
 #[derive(Clone, Debug)]
 pub struct Button {
     /// ID string, e.g. for CSS
@@ -476,7 +476,12 @@ pub struct Button {
     pub size: Size,
     /// The name of the visual class applied
     pub outline_name: CString,
-    /// current state, shared with other buttons
+    // action-related stuff
+    /// A cache of raw keycodes derived from Action::Submit given a keymap
+    pub keycodes: Vec<KeyCode>,
+    /// Static description of what the key does when pressed or released
+    pub action: Action,
+    /// Current state, shared with other buttons
     pub state: Rc<RefCell<KeyState>>,
 }
 
@@ -489,7 +494,7 @@ impl Button {
     }
 }
 
-/// The graphical representation of a row of buttons
+/// The representation of a row of buttons
 #[derive(Clone, Debug)]
 pub struct Row {
     /// Buttons together with their offset from the left relative to the row.
@@ -758,10 +763,14 @@ impl fmt::Display for NoSuchView {
 
 impl LayoutData {
     fn get_key(&self, button: &ButtonPosition) -> Option<&Rc<RefCell<KeyState>>> {
+        self.get_button(button).map(|button| &button.state)
+    }
+    
+    fn get_button(&self, button: &ButtonPosition) -> Option<&Button> {
         let (_, view) = self.views.get(&button.view)?;
         let (_, row) = view.rows.get(button.row)?;
         let (_, key) = row.buttons.get(button.position_in_row)?;
-        Some(&key.state)
+        Some(key)
     }
 
     /// Calculates size without margins
@@ -1029,7 +1038,10 @@ mod procedures {
             let state = make_state();
             let state_clone = state.clone();
 
-            let button = make_button_with_state("1".into(), state);
+            let button = Box::new(Button {
+                state,
+                ..make_button("1".into())
+            });
             let button_ptr = as_ptr(&button);
 
             let row = Row::new(vec!((0.1, button)));
@@ -1078,12 +1090,13 @@ mod seat {
                 "Button {:?} was already pressed", button,
             );
         } else {
-            layout.state.pressed_buttons.push(button);
+            layout.state.pressed_buttons.push(button.clone());
         }
         let key: KeyState = {
             RefCell::borrow(rckey).clone()
         };
-        let action = key.action.clone();
+        let button = layout.shape.get_button(&button).unwrap();
+        let action = button.action.clone();
         match action {
             Action::Submit {
                 text: Some(text),
@@ -1091,7 +1104,7 @@ mod seat {
             } => submission.handle_press(
                 KeyState::get_id(rckey),
                 SubmitData::Text(&text),
-                &key.keycodes,
+                &button.keycodes,
                 time,
             ),
             Action::Submit {
@@ -1100,13 +1113,13 @@ mod seat {
             } => submission.handle_press(
                 KeyState::get_id(rckey),
                 SubmitData::Keycodes,
-                &key.keycodes,
+                &button.keycodes,
                 time,
             ),
             Action::Erase => submission.handle_press(
                 KeyState::get_id(rckey),
                 SubmitData::Erase,
-                &key.keycodes,
+                &button.keycodes,
                 time,
             ),
             _ => {},
@@ -1125,12 +1138,13 @@ mod seat {
         // and passed always.
         manager: Option<(&actors::popover::State, receiver::State)>,
         rckey: &Rc<RefCell<KeyState>>,
-        button: ButtonPosition,
+        button_pos: ButtonPosition,
     ) {
         let key: KeyState = {
             RefCell::borrow(rckey).clone()
         };
-        let action = key.action.clone();
+        let button = layout.shape.get_button(&button_pos).unwrap();
+        let action = button.action.clone();
 
         layout.apply_view_transition(&action);
 
@@ -1188,11 +1202,12 @@ mod seat {
         };
 
         // Apply state changes
-        let pos = layout.state.pressed_buttons.iter().position(|b| b == &button);
+        let pos = layout.state.pressed_buttons.iter()
+            .position(|b| b == &button_pos);
         if let Some(pos) = pos {
             layout.state.pressed_buttons.remove(pos);
         } else {
-            log_print!(logging::Level::Bug, "No button to remove from pressed list: {:?}", button);                
+            log_print!(logging::Level::Bug, "No button to remove from pressed list: {:?}", button_pos);                
         }
         // Commit activated button state changes
         RefCell::replace(rckey, key);
@@ -1204,33 +1219,26 @@ mod test {
     use super::*;
 
     use std::ffi::CString;
-    use ::keyboard::PressType;
+    use crate::keyboard::{PressType, KeyState};
 
-    pub fn make_state_with_action(action: Action)
-        -> Rc<RefCell<::keyboard::KeyState>>
-    {
-        Rc::new(RefCell::new(::keyboard::KeyState {
+    pub fn make_state() -> Rc<RefCell<KeyState>> {
+        Rc::new(RefCell::new(KeyState {
             pressed: PressType::Released,
-            keycodes: Vec::new(),
-            action,
         }))
     }
 
-    pub fn make_state() -> Rc<RefCell<::keyboard::KeyState>> {
-        make_state_with_action(Action::SetView("default".into()))
-    }
-
-    pub fn make_button_with_state(
+    pub fn make_button(
         name: String,
-        state: Rc<RefCell<::keyboard::KeyState>>,
-    ) -> Box<Button> {
-        Box::new(Button {
+    ) -> Button {
+        Button {
             name: CString::new(name.clone()).unwrap(),
             size: Size { width: 0f64, height: 0f64 },
             outline_name: CString::new("test").unwrap(),
             label: Label::Text(CString::new(name).unwrap()),
-            state: state,
-        })
+            action: Action::SetView("default".into()),
+            keycodes: Vec::new(),
+            state: make_state(),
+        }
     }
 
     #[test]
@@ -1279,17 +1287,17 @@ mod test {
             Row::new(vec![
                 (
                     0.0,
-                    make_button_with_state(
-                        "switch".into(),
-                        make_state_with_action(switch.clone())
-                    ),
+                    Box::new(Button {
+                        action: switch.clone(),
+                        ..make_button("switch".into())
+                    }),
                 ),
                 (
                     1.0,
-                    make_button_with_state(
-                        "submit".into(),
-                        make_state_with_action(submit.clone())
-                    ),
+                    Box::new(Button {
+                        action: submit.clone(),
+                        ..make_button("submit".into())
+                    }),
                 ),
             ]),
         )]);
@@ -1359,17 +1367,17 @@ mod test {
             Row::new(vec![
                 (
                     0.0,
-                    make_button_with_state(
-                        "switch".into(),
-                        make_state_with_action(switch.clone())
-                    ),
+                    Box::new(Button {
+                        action: switch.clone(),
+                        ..make_button("switch".into())
+                    }),
                 ),
                 (
                     1.0,
-                    make_button_with_state(
-                        "submit".into(),
-                        make_state_with_action(submit.clone())
-                    ),
+                    Box::new(Button {
+                        action: submit.clone(),
+                        ..make_button("submit".into())
+                    }),
                 ),
             ]),
         )]);
@@ -1430,17 +1438,17 @@ mod test {
             Row::new(vec![
                 (
                     0.0,
-                    make_button_with_state(
-                        "switch".into(),
-                        make_state_with_action(switch.clone())
-                    ),
+                    Box::new(Button {
+                        action: switch.clone(),
+                        ..make_button("switch".into())
+                    }),
                 ),
                 (
                     1.0,
-                    make_button_with_state(
-                        "submit".into(),
-                        make_state_with_action(submit.clone())
-                    ),
+                    Box::new(Button {
+                        action: submit.clone(),
+                        ..make_button("submit".into())
+                    }),
                 ),
             ]),
         )]);
@@ -1496,14 +1504,14 @@ mod test {
                         0.0,
                         Box::new(Button {
                             size: Size { width: 5.0, height: 10.0 },
-                            ..*make_button_with_state("A".into(), make_state())
+                            ..make_button("A".into())
                         }),
                     ),
                     (
                         5.0,
                         Box::new(Button {
                             size: Size { width: 5.0, height: 10.0 },
-                            ..*make_button_with_state("B".into(), make_state())
+                            ..make_button("B".into())
                         }),
                     ),
                 ]),
@@ -1515,7 +1523,7 @@ mod test {
                         0.0,
                         Box::new(Button {
                             size: Size { width: 30.0, height: 10.0 },
-                            ..*make_button_with_state("bar".into(), make_state())
+                            ..make_button("bar".into())
                         }),
                     ),
                 ]),
@@ -1549,7 +1557,7 @@ mod test {
                     0.0,
                     Box::new(Button {
                         size: Size { width: 1.0, height: 1.0 },
-                        ..*make_button_with_state("foo".into(), make_state())
+                        ..make_button("foo".into())
                     }),
                 )]),
             ),
@@ -1599,7 +1607,7 @@ mod test {
                     0.0,
                     Box::new(Button {
                         size: Size { width: 1.0, height: 1.0 },
-                        ..*make_button_with_state("foo".into(), make_state())
+                        ..make_button("foo".into())
                     }),
                 )]),
             ),

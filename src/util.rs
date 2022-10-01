@@ -1,12 +1,10 @@
 /*! Assorted helpers */
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use ::float_ord::FloatOrd;
 
 use std::borrow::Borrow;
 use std::hash::{ Hash, Hasher };
-use std::iter::FromIterator;
 use std::ops::Mul;
 
 pub mod c {
@@ -136,16 +134,6 @@ pub mod c {
 pub trait CloneOwned {
     type Owned;
     fn clone_owned(&self) -> Self::Owned;
-}
-
-pub fn hash_map_map<K, V, F, K1, V1>(map: HashMap<K, V>, mut f: F)
-    -> HashMap<K1, V1>
-    where F: FnMut(K, V) -> (K1, V1),
-        K1: std::cmp::Eq + std::hash::Hash
-{
-    HashMap::from_iter(
-        map.into_iter().map(|(key, value)| f(key, value))
-    )
 }
 
 pub fn find_max_double<T, I, F>(iterator: I, get: F)
