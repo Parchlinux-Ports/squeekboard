@@ -238,16 +238,20 @@ pub mod c {
 
             // The list must be copied,
             // because it will be mutated in the loop
-            for key in layout.state.pressed_keys.clone() {
-                let key: &Rc<RefCell<KeyState>> = key.borrow();
-                seat::handle_release_key(
-                    layout,
-                    &mut submission,
-                    Some(&ui_backend),
-                    time,
-                    Some((&popover_state, app_state.clone())),
-                    key,
-                );
+            for button in layout.state.pressed_buttons.clone() {
+                if let Some(key) = layout.shape.get_key(&button).map(|k| k.clone()) {
+                    seat::handle_release_key(
+                        layout,
+                        &mut submission,
+                        Some(&ui_backend),
+                        time,
+                        Some((&popover_state, app_state.clone())),
+                        &key,
+                        button,
+                    );
+                } else {
+                    log_print!(logging::Level::Bug, "Failed to find button at position {:?}", button);
+                }
             }
             drawing::queue_redraw(ui_keyboard);
         }
@@ -265,16 +269,21 @@ pub mod c {
             let mut submission = submission.borrow_mut();
             // The list must be copied,
             // because it will be mutated in the loop
-            for key in layout.state.pressed_keys.clone() {
-                let key: &Rc<RefCell<KeyState>> = key.borrow();
-                seat::handle_release_key(
-                    layout,
-                    &mut submission,
-                    None, // don't update UI
-                    Timestamp(time),
-                    None, // don't switch layouts
-                    &mut key.clone(),
-                );
+            for button in layout.state.pressed_buttons.clone() {
+                if let Some(key) = layout.shape.get_key(&button) {
+                    let key: &Rc<RefCell<KeyState>> = key.borrow();
+                    seat::handle_release_key(
+                        layout,
+                        &mut submission,
+                        None, // don't update UI
+                        Timestamp(time),
+                        None, // don't switch layouts
+                        &mut key.clone(),
+                        button,
+                    );
+                } else {
+                    log_print!(logging::Level::Bug, "Failed to find button at position {:?}", button);
+                }
             }
         }
 
@@ -296,14 +305,20 @@ pub mod c {
             );
 
             let state = layout.find_button_by_position(point)
-                .map(|place| place.button.state.clone());
+                .map(|(place, index)| (place.button.state.clone(), index));
 
-            if let Some(state) = state {
+            if let Some((state, (row, position_in_row))) = state {
+                let button = ButtonPosition {
+                    view: layout.state.current_view.clone(),
+                    row,
+                    position_in_row,
+                };
                 seat::handle_press_key(
                     layout,
                     &mut submission,
                     Timestamp(time),
                     &state,
+                    button,
                 );
                 // maybe TODO: draw on the display buffer here
                 drawing::queue_redraw(ui_keyboard);
@@ -344,39 +359,48 @@ pub mod c {
                 Point { x: x_widget, y: y_widget }
             );
 
-            let pressed = layout.state.pressed_keys.clone();
+            let pressed = layout.state.pressed_buttons.clone();
             let button_info = {
                 let place = layout.find_button_by_position(point);
-                place.map(|place| {(
+                place.map(|(place, index)| {(
                     place.button.state.clone(),
-                    place.button.clone(),
-                    place.offset,
+                    index,
                 )})
             };
 
-            if let Some((state, _button, _view_position)) = button_info {
+            if let Some((state, (row, position_in_row))) = button_info {
                 let mut found = false;
-                for wrapped_key in pressed {
-                    let key: &Rc<RefCell<KeyState>> = wrapped_key.borrow();
-                    if Rc::ptr_eq(&state, &wrapped_key.0) {
-                        found = true;
+                for button in pressed {
+                    if let Some(key) = layout.shape.get_key(&button).map(|k| k.clone()) {
+                        if Rc::ptr_eq(&state, &key) {
+                            found = true;
+                        } else {
+                            seat::handle_release_key(
+                                layout,
+                                &mut submission,
+                                Some(&ui_backend),
+                                time,
+                                Some((&popover_state, app_state.clone())),
+                                &key,
+                                button,
+                            );
+                        }
                     } else {
-                        seat::handle_release_key(
-                            layout,
-                            &mut submission,
-                            Some(&ui_backend),
-                            time,
-                            Some((&popover_state, app_state.clone())),
-                            key,
-                        );
+                        log_print!(logging::Level::Bug, "Failed to find button at position {:?}", button);
                     }
                 }
                 if !found {
+                    let button = ButtonPosition {
+                        view: layout.state.current_view.clone(),
+                        row,
+                        position_in_row,
+                    };
                     seat::handle_press_key(
                         layout,
                         &mut submission,
                         time,
                         &state,
+                        button,
                     );
                     // maybe TODO: draw on the display buffer here
                     unsafe {
@@ -384,16 +408,20 @@ pub mod c {
                     }
                 }
             } else {
-                for wrapped_key in pressed {
-                    let key: &Rc<RefCell<KeyState>> = wrapped_key.borrow();
-                    seat::handle_release_key(
-                        layout,
-                        &mut submission,
-                        Some(&ui_backend),
-                        time,
-                        Some((&popover_state, app_state.clone())),
-                        key,
-                    );
+                for button in pressed {
+                    if let Some(key) = layout.shape.get_key(&button).map(|k| k.clone()) {
+                        seat::handle_release_key(
+                            layout,
+                            &mut submission,
+                            Some(&ui_backend),
+                            time,
+                            Some((&popover_state, app_state.clone())),
+                            &key,
+                            button,
+                        );
+                    } else {
+                        log_print!(logging::Level::Bug, "Failed to find button at position {:?}", button);
+                    }
                 }
             }
             drawing::queue_redraw(ui_keyboard);
@@ -509,8 +537,9 @@ impl Row {
     }
 
     /// Finds the first button that covers the specified point
-    /// relative to row's position's origin
-    fn find_button_by_position(&self, x: f64) -> &(f64, Box<Button>)
+    /// relative to row's position's origin.
+    /// Returns its index too.
+    fn find_button_by_position(&self, x: f64) -> (&(f64, Box<Button>), usize)
     {
         // Buttons are sorted so we can use a binary search to find the clicked
         // button. Note this doesn't check whether the point is actually within
@@ -523,7 +552,7 @@ impl Row {
         let index = result.unwrap_or_else(|r| r);
         let index = if index > 0 { index - 1 } else { 0 };
 
-        &self.buttons[index]
+        (&self.buttons[index], index)
     }
 }
 
@@ -574,9 +603,10 @@ impl View {
         View { rows, size: Size { width, height } }
     }
     /// Finds the first button that covers the specified point
-    /// relative to view's position's origin
+    /// relative to view's position's origin.
+    /// Returns also (row, column) index.
     fn find_button_by_position(&self, point: c::Point)
-        -> Option<ButtonPlace>
+        -> Option<(ButtonPlace, (usize, usize))>
     {
         // Only test bounds of the view here, letting rows/column search extend
         // to the edges of these bounds.
@@ -599,12 +629,16 @@ impl View {
         let index = if index > 0 { index - 1 } else { 0 };
 
         let row = &self.rows[index];
-        let button = row.1.find_button_by_position(point.x - row.0.x);
+        let ((button_pos, button), button_index)
+            = row.1.find_button_by_position(point.x - row.0.x);
 
-        Some(ButtonPlace {
-            button: &button.1,
-            offset: &row.0 + c::Point { x: button.0, y: 0.0 },
-        })
+        Some((
+            ButtonPlace {
+                button: &button,
+                offset: &row.0 + c::Point { x: *button_pos, y: 0.0 },
+            },
+            (index, button_index),
+        ))
     }
 
     pub fn get_size(&self) -> Size {
@@ -662,6 +696,19 @@ pub struct Layout {
     pub shape: LayoutData,
 }
 
+/// Button position for the pressed buttons list
+#[derive(Clone, Debug, PartialEq)]
+pub struct ButtonPosition {
+    // There's only ever going to be a handul of pressed buttons,
+    // so as inefficient as String is, it won't make a difference.
+    // In the worst case, views can turn into indices in the description.
+    view: String,
+    /// Index to the view's row.
+    row: usize,
+    /// Index to the row's button.
+    position_in_row: usize,
+}
+
 /// Changeable state that can't be derived from the definition of the layout.
 pub struct LayoutState {
     pub current_view: String,
@@ -677,12 +724,13 @@ pub struct LayoutState {
     // through all buttons of the current view anyway.
     // When the list tracks actual location,
     // it becomes possible to place popovers and other UI accurately.
-    pub pressed_keys: HashSet<::util::Pointer<RefCell<KeyState>>>,
+    pub pressed_buttons: Vec<ButtonPosition>,
 }
 
 /// A builder structure for picking up layout data from storage
 pub struct LayoutParseData {
-    /// Point is the offset within layout
+    /// Point is the offset within the panel
+    /// (transformed to layout's coordinate space).
     pub views: HashMap<String, (c::Point, View)>,
     /// xkb keymaps applicable to the contained keys
     pub keymaps: Vec<CString>,
@@ -717,6 +765,13 @@ impl fmt::Display for NoSuchView {
 
 
 impl LayoutData {
+    fn get_key(&self, button: &ButtonPosition) -> Option<&Rc<RefCell<KeyState>>> {
+        let (_, view) = self.views.get(&button.view)?;
+        let (_, row) = view.rows.get(button.row)?;
+        let (_, key) = row.buttons.get(button.position_in_row)?;
+        Some(&key.state)
+    }
+
     /// Calculates size without margins
     fn calculate_inner_size(&self) -> Size {
         View::calculate_super_size(
@@ -779,7 +834,7 @@ impl Layout {
             state: LayoutState {
                 current_view: "base".to_owned(),
                 view_latched: LatchedState::Not,
-                pressed_keys: HashSet::new(),
+                pressed_buttons: Vec::new(),
             },
         }
     }
@@ -808,7 +863,8 @@ impl Layout {
         &self.state.view_latched
     }
 
-    fn find_button_by_position(&self, point: c::Point) -> Option<ButtonPlace> {
+    /// Returns index too
+    fn find_button_by_position(&self, point: c::Point) -> Option<(ButtonPlace, (usize, usize))> {
         let (offset, layout) = self.get_current_view_position();
         layout.find_button_by_position(point - offset)
     }
@@ -1020,12 +1076,17 @@ mod seat {
         submission: &mut Submission,
         time: Timestamp,
         rckey: &Rc<RefCell<KeyState>>,
+        button: ButtonPosition,
     ) {
-        if !layout.state.pressed_keys.insert(::util::Pointer(rckey.clone())) {
+        let find = layout.state.pressed_buttons.iter()
+            .position(|b| b == &button);
+        if let Some(_) = find {
             log_print!(
                 logging::Level::Bug,
-                "Key {:?} was already pressed", rckey,
+                "Button {:?} was already pressed", button,
             );
+        } else {
+            layout.state.pressed_buttons.push(button);
         }
         let key: KeyState = {
             RefCell::borrow(rckey).clone()
@@ -1072,6 +1133,7 @@ mod seat {
         // and passed always.
         manager: Option<(&actors::popover::State, receiver::State)>,
         rckey: &Rc<RefCell<KeyState>>,
+        button: ButtonPosition,
     ) {
         let key: KeyState = {
             RefCell::borrow(rckey).clone()
@@ -1135,7 +1197,12 @@ mod seat {
 
         let pointer = ::util::Pointer(rckey.clone());
         // Apply state changes
-        layout.state.pressed_keys.remove(&pointer);
+        let pos = layout.state.pressed_buttons.iter().position(|b| b == &button);
+        if let Some(pos) = pos {
+            layout.state.pressed_buttons.remove(pos);
+        } else {
+            log_print!(logging::Level::Bug, "No button to remove from pressed list: {:?}", button);                
+        }
         // Commit activated button state changes
         RefCell::replace(rckey, key);
     }
@@ -1240,7 +1307,7 @@ mod test {
             state: LayoutState {
                 current_view: "base".into(),
                 view_latched: LatchedState::Not,
-                pressed_keys: HashSet::new(),
+                pressed_buttons: Vec::new(),
             },
             shape: LayoutData {
                 keymaps: Vec::new(),
@@ -1320,7 +1387,7 @@ mod test {
             state: LayoutState {
                 current_view: "base".into(),
                 view_latched: LatchedState::Not,
-                pressed_keys: HashSet::new(),
+                pressed_buttons: Vec::new(),
             },
             shape: LayoutData {
                 keymaps: Vec::new(),
@@ -1391,7 +1458,7 @@ mod test {
             state: LayoutState {
                 current_view: "base".into(),
                 view_latched: LatchedState::Not,
-                pressed_keys: HashSet::new(),
+                pressed_buttons: Vec::new(),
             },
             shape: LayoutData {
                 keymaps: Vec::new(),
@@ -1465,19 +1532,19 @@ mod test {
         ]);
         assert!(
             view.find_button_by_position(c::Point { x: 5.0, y: 5.0 })
-                .unwrap().button.name.to_str().unwrap() == "A"
+                .unwrap().0.button.name.to_str().unwrap() == "A"
         );
         assert!(
             view.find_button_by_position(c::Point { x: 14.99, y: 5.0 })
-                .unwrap().button.name.to_str().unwrap() == "A"
+                .unwrap().0.button.name.to_str().unwrap() == "A"
         );
         assert!(
             view.find_button_by_position(c::Point { x: 15.01, y: 5.0 })
-                .unwrap().button.name.to_str().unwrap() == "B"
+                .unwrap().0.button.name.to_str().unwrap() == "B"
         );
         assert!(
             view.find_button_by_position(c::Point { x: 25.0, y: 5.0 })
-                .unwrap().button.name.to_str().unwrap() == "B"
+                .unwrap().0.button.name.to_str().unwrap() == "B"
         );
     }
 
