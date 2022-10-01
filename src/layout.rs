@@ -780,6 +780,11 @@ impl LayoutData {
         Some(key)
     }
 
+    fn find_button_place(&self, button: &ButtonPosition) -> Option<procedures::Place> {
+        let (_, view) = self.views.get(&button.view)?;
+        procedures::find_button_place(view, (button.row, button.position_in_row))
+    }
+    
     /// Calculates size without margins
     fn calculate_inner_size(&self) -> Size {
         View::calculate_super_size(
@@ -1008,7 +1013,7 @@ fn try_set_view(layout: &mut Layout, view_name: &str) {
 mod procedures {
     use super::*;
 
-    type Place<'v> = (c::Point, &'v Button);
+    pub type Place<'v> = (c::Point, &'v Button);
 
     /// Finds the canvas offset of the button.
     pub fn find_button_place<'v>(
@@ -1116,8 +1121,8 @@ mod seat {
         }
     }
 
-    pub fn handle_release_key(
-        layout: &mut Layout,
+    fn handle_release_key_cleaner(
+        shape: &LayoutData,
         submission: &mut Submission,
         ui: Option<&UIBackend>,
         time: Timestamp,
@@ -1127,14 +1132,12 @@ mod seat {
         // and passed always.
         manager: Option<(&actors::popover::State, receiver::State)>,
         button_pos: &ButtonPosition,
-    ) {
-        let button = layout.shape.get_button(&button_pos).unwrap();
+    ) -> Action{
+        let button = shape.get_button(&button_pos).unwrap();
         let action = button.action.clone();
 
-        layout.apply_view_transition(&action);
-
         // process non-view switching
-        match action {
+        match action.clone() {
             Action::Submit { text: _, keys: _ }
                 | Action::Erase
             => {
@@ -1156,10 +1159,7 @@ mod seat {
             Action::ShowPreferences => if let Some(ui) = &ui {
                 // only show when layout manager is available
                 if let Some((manager, app_state)) = manager {
-                    let view = layout.get_current_view();
-                    let place = procedures::find_button_place(
-                        view, (button_pos.row, button_pos.position_in_row),
-                    );
+                    let place = shape.find_button_place(button_pos);
 
                     if let Some((position, button)) = place {
                         let bounds = c::Bounds {
@@ -1180,8 +1180,39 @@ mod seat {
             // Other keys are handled in view switcher before.
             _ => {}
         };
-
+        
+        action
+    }
+    
+    /// Mutates layout and sends events.
+    /// This split away from handle_release_key
+    /// in order to pull at least some of the mutation away
+    /// from what should some day be core functional logic.
+    pub fn handle_release_key(
+        layout: &mut Layout,
+        submission: &mut Submission,
+        ui: Option<&UIBackend>,
+        time: Timestamp,
+        // TODO: intermediate measure:
+        // passing state conditionally because it's only used for popover.
+        // Eventually, it should be used for sumitting button events,
+        // and passed always.
+        manager: Option<(&actors::popover::State, receiver::State)>,
+        button_pos: &ButtonPosition,
+    ) {
+        // Send events
+        let action = handle_release_key_cleaner(
+            &layout.shape,
+            submission,
+            ui,
+            time,
+            manager,
+            button_pos,
+        );
+        
         // Apply state changes
+        layout.apply_view_transition(&action);
+        
         if let Presence::Missing = layout.state.active_buttons.remove(&button_pos) {
             log_print!(
                 logging::Level::Bug,
