@@ -19,7 +19,7 @@
 
 use std::cell::RefCell;
 use std::cmp;
-use std::collections::{ HashMap, HashSet };
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::fmt;
 use std::rc::Rc;
@@ -305,7 +305,7 @@ pub mod c {
             );
 
             let state = layout.find_button_by_position(point)
-                .map(|(place, index)| (place.button.state.clone(), index));
+                .map(|(button, index)| (button.state.clone(), index));
 
             if let Some((state, (row, position_in_row))) = state {
                 let button = ButtonPosition {
@@ -362,8 +362,8 @@ pub mod c {
             let pressed = layout.state.pressed_buttons.clone();
             let button_info = {
                 let place = layout.find_button_by_position(point);
-                place.map(|(place, index)| {(
-                    place.button.state.clone(),
+                place.map(|(button, index)| {(
+                    button.state.clone(),
                     index,
                 )})
             };
@@ -452,11 +452,6 @@ pub mod c {
     }
 }
 
-pub struct ButtonPlace<'a> {
-    button: &'a Button,
-    offset: c::Point,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Size {
     pub width: f64,
@@ -539,7 +534,7 @@ impl Row {
     /// Finds the first button that covers the specified point
     /// relative to row's position's origin.
     /// Returns its index too.
-    fn find_button_by_position(&self, x: f64) -> (&(f64, Box<Button>), usize)
+    fn find_button_by_position(&self, x: f64) -> (&Box<Button>, usize)
     {
         // Buttons are sorted so we can use a binary search to find the clicked
         // button. Note this doesn't check whether the point is actually within
@@ -552,7 +547,7 @@ impl Row {
         let index = result.unwrap_or_else(|r| r);
         let index = if index > 0 { index - 1 } else { 0 };
 
-        (&self.buttons[index], index)
+        (&self.buttons[index].1, index)
     }
 }
 
@@ -606,7 +601,7 @@ impl View {
     /// relative to view's position's origin.
     /// Returns also (row, column) index.
     fn find_button_by_position(&self, point: c::Point)
-        -> Option<(ButtonPlace, (usize, usize))>
+        -> Option<(&Button, (usize, usize))>
     {
         // Only test bounds of the view here, letting rows/column search extend
         // to the edges of these bounds.
@@ -629,14 +624,11 @@ impl View {
         let index = if index > 0 { index - 1 } else { 0 };
 
         let row = &self.rows[index];
-        let ((button_pos, button), button_index)
+        let (button, button_index)
             = row.1.find_button_by_position(point.x - row.0.x);
 
         Some((
-            ButtonPlace {
-                button: &button,
-                offset: &row.0 + c::Point { x: *button_pos, y: 0.0 },
-            },
+            &button,
             (index, button_index),
         ))
     }
@@ -864,7 +856,7 @@ impl Layout {
     }
 
     /// Returns index too
-    fn find_button_by_position(&self, point: c::Point) -> Option<(ButtonPlace, (usize, usize))> {
+    fn find_button_by_position(&self, point: c::Point) -> Option<(&Button, (usize, usize))> {
         let (offset, layout) = self.get_current_view_position();
         layout.find_button_by_position(point - offset)
     }
@@ -1195,7 +1187,6 @@ mod seat {
             _ => {}
         };
 
-        let pointer = ::util::Pointer(rckey.clone());
         // Apply state changes
         let pos = layout.state.pressed_buttons.iter().position(|b| b == &button);
         if let Some(pos) = pos {
@@ -1532,19 +1523,19 @@ mod test {
         ]);
         assert!(
             view.find_button_by_position(c::Point { x: 5.0, y: 5.0 })
-                .unwrap().0.button.name.to_str().unwrap() == "A"
+                .unwrap().0.name.to_str().unwrap() == "A"
         );
         assert!(
             view.find_button_by_position(c::Point { x: 14.99, y: 5.0 })
-                .unwrap().0.button.name.to_str().unwrap() == "A"
+                .unwrap().0.name.to_str().unwrap() == "A"
         );
         assert!(
             view.find_button_by_position(c::Point { x: 15.01, y: 5.0 })
-                .unwrap().0.button.name.to_str().unwrap() == "B"
+                .unwrap().0.name.to_str().unwrap() == "B"
         );
         assert!(
             view.find_button_by_position(c::Point { x: 25.0, y: 5.0 })
-                .unwrap().0.button.name.to_str().unwrap() == "B"
+                .unwrap().0.name.to_str().unwrap() == "B"
         );
     }
 
