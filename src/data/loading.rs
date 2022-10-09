@@ -192,7 +192,7 @@ fn iter_layout_sources(
 }
 
 fn load_layout_data(source: DataSource)
-    -> Result<::layout::LayoutData, LoadError>
+    -> Result<::layout::LayoutParseData, LoadError>
 {
     let handler = logging::Print {};
     match source {
@@ -217,7 +217,7 @@ fn load_layout_data_with_fallback(
     kind: ArrangementKind,
     purpose: ContentPurpose,
     overlay: Option<&str>,
-) -> (ArrangementKind, layout::LayoutData) {
+) -> (ArrangementKind, layout::LayoutParseData) {
 
     // Build the path to the right keyboard layout subdirectory
     let path = env::var_os("SQUEEKBOARD_KEYBOARDSDIR")

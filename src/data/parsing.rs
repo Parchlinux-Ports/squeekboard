@@ -4,12 +4,10 @@
 
 /*! Parsing of the data files containing layouts */
 
-use std::cell::RefCell;
 use std::collections::{ HashMap, HashSet };
 use std::ffi::CString;
 use std::fs;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::vec::Vec;
 
 use xkbcommon::xkb;
@@ -17,13 +15,11 @@ use xkbcommon::xkb;
 use super::{ Error, LoadError };
 
 use ::action;
-use ::keyboard::{
-    KeyState, PressType,
-    generate_keymaps, generate_keycodes, KeyCode, FormattingError
+use crate::keyboard::{
+    Key, generate_keymaps, generate_keycodes, KeyCode, FormattingError
 };
 use ::layout;
 use ::logging;
-use ::util::hash_map_map;
 use ::resources;
 
 // traits, derives
@@ -157,7 +153,7 @@ impl Layout {
     }
 
     pub fn build<H: logging::Handler>(self, mut warning_handler: H)
-        -> (Result<::layout::LayoutData, FormattingError>, H)
+        -> (Result<::layout::LayoutParseData, FormattingError>, H)
     {
         let button_names = self.views.values()
             .flat_map(|rows| {
@@ -183,7 +179,7 @@ impl Layout {
             extract_symbol_names(&button_actions)
         );
 
-        let button_states = HashMap::<String, KeyState>::from_iter(
+        let button_states = HashMap::<String, Key>::from_iter(
             button_actions.into_iter().map(|(name, action)| {
                 let keycodes = match &action {
                     ::action::Action::Submit { text: _, keys } => {
@@ -208,8 +204,7 @@ impl Layout {
                 };
                 (
                     name.into(),
-                    KeyState {
-                        pressed: PressType::Released,
+                    Key {
                         keycodes,
                         action,
                     }
@@ -222,20 +217,14 @@ impl Layout {
             Ok(v) => v,
         };
 
-        let button_states_cache = hash_map_map(
-            button_states,
-            |name, state| {(
-                name,
-                Rc::new(RefCell::new(state))
-            )}
-        );
+        let button_states_cache = button_states;
 
         let views: Vec<_> = self.views.iter()
             .map(|(name, view)| {
                 let rows = view.iter().map(|row| {
                     let buttons = row.split_ascii_whitespace()
                         .map(|name| {
-                            Box::new(create_button(
+                            create_button(
                                 &self.buttons,
                                 &self.outlines,
                                 name,
@@ -243,7 +232,7 @@ impl Layout {
                                     .expect("Button state not created")
                                     .clone(),
                                 &mut warning_handler,
-                            ))
+                            )
                         });
                     layout::Row::new(
                         add_offsets(
@@ -279,7 +268,7 @@ impl Layout {
         };
 
         (
-            Ok(::layout::LayoutData {
+            Ok(layout::LayoutParseData {
                 views: views,
                 keymaps: keymaps.into_iter().map(|keymap_str|
                     CString::new(keymap_str)
@@ -461,7 +450,7 @@ fn create_button<H: logging::Handler>(
     button_info: &HashMap<String, ButtonMeta>,
     outlines: &HashMap<String, Outline>,
     name: &str,
-    state: Rc<RefCell<KeyState>>,
+    data: Key,
     warning_handler: &mut H,
 ) -> ::layout::Button {
     let cname = CString::new(name.clone())
@@ -523,7 +512,8 @@ fn create_button<H: logging::Handler>(
             height: outline.height,
         },
         label: label,
-        state: state,
+        action: data.action,
+        keycodes: data.keycodes,
     }
 }
 
@@ -677,7 +667,6 @@ mod tests {
             out.views["base"].1
                 .get_rows()[0].1
                 .get_buttons()[0].1
-                .state.borrow()
                 .keycodes.len(),
             2
         );
@@ -694,7 +683,6 @@ mod tests {
             out.views["base"].1
                 .get_rows()[0].1
                 .get_buttons()[0].1
-                .state.borrow()
                 .keycodes.len(),
             1
         );

@@ -17,19 +17,17 @@
  * and let the renderer scale and center it within the widget.
  */
 
-use std::cell::RefCell;
 use std::cmp;
-use std::collections::{ HashMap, HashSet };
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::fmt;
-use std::rc::Rc;
 use std::vec::Vec;
 
 use crate::action::Action;
 use crate::actors;
 use crate::drawing;
 use crate::float_ord::FloatOrd;
-use crate::keyboard::KeyState;
+use crate::keyboard::{KeyState, KeyCode, PressType};
 use crate::logging;
 use crate::popover;
 use crate::receiver;
@@ -39,7 +37,6 @@ use crate::util::find_max_double;
 use crate::imservice::ContentPurpose;
 
 // Traits
-use std::borrow::Borrow;
 use crate::logging::Warn;
 
 /// Gathers stuff defined in C or called by C
@@ -182,7 +179,7 @@ pub mod c {
         allocation_height: f64,
     ) -> Transformation {
         let layout = unsafe { &*layout };
-        layout.calculate_transformation(Size {
+        layout.shape.calculate_transformation(Size {
             width: allocation_width,
             height: allocation_height,
         })
@@ -192,14 +189,14 @@ pub mod c {
     pub extern "C"
     fn squeek_layout_get_kind(layout: *const Layout) -> u32 {
         let layout = unsafe { &*layout };
-        layout.kind.clone() as u32
+        layout.shape.kind.clone() as u32
     }
 
     #[no_mangle]
     pub extern "C"
     fn squeek_layout_get_purpose(layout: *const Layout) -> u32 {
         let layout = unsafe { &*layout };
-        layout.purpose.clone() as u32
+        layout.shape.purpose.clone() as u32
     }
 
     #[no_mangle]
@@ -238,15 +235,16 @@ pub mod c {
 
             // The list must be copied,
             // because it will be mutated in the loop
-            for key in layout.pressed_keys.clone() {
-                let key: &Rc<RefCell<KeyState>> = key.borrow();
+            let pressed_buttons
+                = layout.state.active_buttons.clone();
+            for (button, _key_state) in pressed_buttons.iter_pressed() {
                 seat::handle_release_key(
                     layout,
                     &mut submission,
                     Some(&ui_backend),
                     time,
                     Some((&popover_state, app_state.clone())),
-                    key,
+                    button,
                 );
             }
             drawing::queue_redraw(ui_keyboard);
@@ -265,15 +263,15 @@ pub mod c {
             let mut submission = submission.borrow_mut();
             // The list must be copied,
             // because it will be mutated in the loop
-            for key in layout.pressed_keys.clone() {
-                let key: &Rc<RefCell<KeyState>> = key.borrow();
+            let pressed_buttons = layout.state.active_buttons.clone();
+            for (button, _key_state) in pressed_buttons.iter_pressed() {
                 seat::handle_release_key(
                     layout,
                     &mut submission,
                     None, // don't update UI
                     Timestamp(time),
                     None, // don't switch layouts
-                    &mut key.clone(),
+                    button,
                 );
             }
         }
@@ -295,15 +293,19 @@ pub mod c {
                 Point { x: x_widget, y: y_widget }
             );
 
-            let state = layout.find_button_by_position(point)
-                .map(|place| place.button.state.clone());
+            let index = layout.find_index_by_position(point);
 
-            if let Some(state) = state {
+            if let Some((row, position_in_row)) = index {
+                let button = ButtonPosition {
+                    view: layout.state.current_view.clone(),
+                    row,
+                    position_in_row,
+                };
                 seat::handle_press_key(
                     layout,
                     &mut submission,
                     Timestamp(time),
-                    &state,
+                    &button,
                 );
                 // maybe TODO: draw on the display buffer here
                 drawing::queue_redraw(ui_keyboard);
@@ -344,21 +346,19 @@ pub mod c {
                 Point { x: x_widget, y: y_widget }
             );
 
-            let pressed = layout.pressed_keys.clone();
-            let button_info = {
-                let place = layout.find_button_by_position(point);
-                place.map(|place| {(
-                    place.button.state.clone(),
-                    place.button.clone(),
-                    place.offset,
-                )})
-            };
+            let pressed_buttons = layout.state.active_buttons.clone();
+            let pressed_buttons = pressed_buttons.iter_pressed();
+            let button_info = layout.find_index_by_position(point);
 
-            if let Some((state, _button, _view_position)) = button_info {
+            if let Some((row, position_in_row)) = button_info {
+                let current_pos = ButtonPosition {
+                    view: layout.state.current_view.clone(),
+                    row,
+                    position_in_row,
+                };
                 let mut found = false;
-                for wrapped_key in pressed {
-                    let key: &Rc<RefCell<KeyState>> = wrapped_key.borrow();
-                    if Rc::ptr_eq(&state, &wrapped_key.0) {
+                for (button, _key_state) in pressed_buttons {
+                    if button == &current_pos {
                         found = true;
                     } else {
                         seat::handle_release_key(
@@ -367,16 +367,21 @@ pub mod c {
                             Some(&ui_backend),
                             time,
                             Some((&popover_state, app_state.clone())),
-                            key,
+                            button,
                         );
                     }
                 }
                 if !found {
+                    let button = ButtonPosition {
+                        view: layout.state.current_view.clone(),
+                        row,
+                        position_in_row,
+                    };
                     seat::handle_press_key(
                         layout,
                         &mut submission,
                         time,
-                        &state,
+                        &button,
                     );
                     // maybe TODO: draw on the display buffer here
                     unsafe {
@@ -384,15 +389,14 @@ pub mod c {
                     }
                 }
             } else {
-                for wrapped_key in pressed {
-                    let key: &Rc<RefCell<KeyState>> = wrapped_key.borrow();
+                for (button, _key_state) in pressed_buttons {
                     seat::handle_release_key(
                         layout,
                         &mut submission,
                         Some(&ui_backend),
                         time,
                         Some((&popover_state, app_state.clone())),
-                        key,
+                        button,
                     );
                 }
             }
@@ -424,11 +428,6 @@ pub mod c {
     }
 }
 
-pub struct ButtonPlace<'a> {
-    button: &'a Button,
-    offset: c::Point,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Size {
     pub width: f64,
@@ -443,8 +442,8 @@ pub enum Label {
     IconName(CString),
 }
 
-/// The graphical representation of a button
-#[derive(Clone, Debug)]
+/// The definition of an interactive button
+#[derive(Clone, Debug, PartialEq)]
 pub struct Button {
     /// ID string, e.g. for CSS
     pub name: CString,
@@ -453,8 +452,11 @@ pub struct Button {
     pub size: Size,
     /// The name of the visual class applied
     pub outline_name: CString,
-    /// current state, shared with other buttons
-    pub state: Rc<RefCell<KeyState>>,
+    // action-related stuff
+    /// A cache of raw keycodes derived from Action::Submit given a keymap
+    pub keycodes: Vec<KeyCode>,
+    /// Static description of what the key does when pressed or released
+    pub action: Action,
 }
 
 impl Button {
@@ -466,19 +468,19 @@ impl Button {
     }
 }
 
-/// The graphical representation of a row of buttons
+/// The representation of a row of buttons
 #[derive(Clone, Debug)]
 pub struct Row {
     /// Buttons together with their offset from the left relative to the row.
     /// ie. the first button always start at 0.
-    buttons: Vec<(f64, Box<Button>)>,
+    buttons: Vec<(f64, Button)>,
 
     /// Total size of the row
     size: Size,
 }
 
 impl Row {
-    pub fn new(buttons: Vec<(f64, Box<Button>)>) -> Row {
+    pub fn new(buttons: Vec<(f64, Button)>) -> Row {
         // Make sure buttons are sorted by offset.
         debug_assert!({
             let mut sorted = buttons.clone();
@@ -504,13 +506,14 @@ impl Row {
         self.size.clone()
     }
 
-    pub fn get_buttons(&self) -> &Vec<(f64, Box<Button>)> {
+    pub fn get_buttons(&self) -> &Vec<(f64, Button)> {
         &self.buttons
     }
 
     /// Finds the first button that covers the specified point
-    /// relative to row's position's origin
-    fn find_button_by_position(&self, x: f64) -> &(f64, Box<Button>)
+    /// relative to row's position's origin.
+    /// Returns its index too.
+    fn find_button_by_position(&self, x: f64) -> (&Button, usize)
     {
         // Buttons are sorted so we can use a binary search to find the clicked
         // button. Note this doesn't check whether the point is actually within
@@ -523,7 +526,7 @@ impl Row {
         let index = result.unwrap_or_else(|r| r);
         let index = if index > 0 { index - 1 } else { 0 };
 
-        &self.buttons[index]
+        (&self.buttons[index].1, index)
     }
 }
 
@@ -574,9 +577,10 @@ impl View {
         View { rows, size: Size { width, height } }
     }
     /// Finds the first button that covers the specified point
-    /// relative to view's position's origin
+    /// relative to view's position's origin.
+    /// Returns also (row, column) index.
     fn find_button_by_position(&self, point: c::Point)
-        -> Option<ButtonPlace>
+        -> Option<(&Button, (usize, usize))>
     {
         // Only test bounds of the view here, letting rows/column search extend
         // to the edges of these bounds.
@@ -599,12 +603,13 @@ impl View {
         let index = if index > 0 { index - 1 } else { 0 };
 
         let row = &self.rows[index];
-        let button = row.1.find_button_by_position(point.x - row.0.x);
+        let (button, button_index)
+            = row.1.find_button_by_position(point.x - row.0.x);
 
-        Some(ButtonPlace {
-            button: &button.1,
-            offset: &row.0 + c::Point { x: button.0, y: 0.0 },
-        })
+        Some((
+            &button,
+            (index, button_index),
+        ))
     }
 
     pub fn get_size(&self) -> Size {
@@ -654,19 +659,97 @@ pub enum LatchedState {
     Not,
 }
 
-// TODO: split into sth like
-// Arrangement (views) + details (keymap) + State (keys)
-/// State of the UI, contains the backend as well
+/// Associates the state of a layout with its definition.
+/// Contains everything necessary to present this layout to the user
+/// and to determine its reactions to inputs.
 pub struct Layout {
-    pub margins: Margins,
-    pub kind: ArrangementKind,
-    pub purpose: ContentPurpose,
+    pub state: LayoutState,
+    pub shape: LayoutData,
+}
+
+/// Button position for the pressed buttons list
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ButtonPosition {
+    // There's only ever going to be a handul of pressed buttons,
+    // so as inefficient as String is, it won't make a difference.
+    // In the worst case, views can turn into indices in the description.
+    pub view: String,
+    /// Index to the view's row.
+    pub row: usize,
+    /// Index to the row's button.
+    pub position_in_row: usize,
+}
+
+#[derive(Clone)]
+pub struct ActiveButtons(HashMap<ButtonPosition, KeyState>);
+
+enum Presence {
+    Missing,
+    Present,
+}
+
+static RELEASED: KeyState = KeyState { pressed: PressType::Released };
+
+impl ActiveButtons {
+    fn insert(&mut self, button: ButtonPosition, state: KeyState) -> Presence {
+        match self.0.insert(button, state) {
+            Some(_) => Presence::Present,
+            None => Presence::Missing,
+        }
+    }
+    
+    pub fn get(&self, button: &ButtonPosition) -> &KeyState {
+        self.0.get(button)
+            .unwrap_or(&RELEASED)
+    }
+    fn remove(&mut self, button: &ButtonPosition) -> Presence {
+        match self.0.remove(button) {
+            Some(_) => Presence::Present,
+            None => Presence::Missing,
+        }
+    }
+    fn iter_pressed(&self) -> impl Iterator<Item=(&ButtonPosition, &KeyState)> {
+        self.0.iter().filter(|(_p, s)| s.pressed == PressType::Pressed)
+    }
+}
+
+/// Changeable state that can't be derived from the definition of the layout.
+pub struct LayoutState {
     pub current_view: String,
 
     // If current view is latched,
     // clicking any button that emits an action (erase, submit, set modifier)
     // will cause lock buttons to unlatch.
     view_latched: LatchedState,
+    // a Vec would be enough, but who cares, this will be small & fast enough
+    // TODO: turn those into per-input point *_buttons to track dragging.
+    // The renderer doesn't need the list of pressed keys any more,
+    // because it needs to iterate
+    // through all buttons of the current view anyway.
+    // When the list tracks actual location,
+    // it becomes possible to place popovers and other UI accurately.
+    /// Buttons not in this list are in their base state:
+    /// not pressed.
+    /// Latched/locked appearance is derived from current view
+    /// and button metadata.
+    pub active_buttons: ActiveButtons,
+}
+
+/// A builder structure for picking up layout data from storage
+pub struct LayoutParseData {
+    /// Point is the offset within the panel
+    /// (transformed to layout's coordinate space).
+    pub views: HashMap<String, (c::Point, View)>,
+    /// xkb keymaps applicable to the contained keys
+    pub keymaps: Vec<CString>,
+    pub margins: Margins,
+}
+
+/// Static, cacheable information for the layout
+pub struct LayoutData {
+    pub margins: Margins,
+    pub kind: ArrangementKind,
+    pub purpose: ContentPurpose,
 
     // Views own the actual buttons which have state
     // Maybe they should own UI only,
@@ -677,23 +760,6 @@ pub struct Layout {
     // Non-UI stuff
     /// xkb keymaps applicable to the contained keys. Unchangeable
     pub keymaps: Vec<CString>,
-    // Changeable state
-    // a Vec would be enough, but who cares, this will be small & fast enough
-    // TODO: turn those into per-input point *_buttons to track dragging.
-    // The renderer doesn't need the list of pressed keys any more,
-    // because it needs to iterate
-    // through all buttons of the current view anyway.
-    // When the list tracks actual location,
-    // it becomes possible to place popovers and other UI accurately.
-    pub pressed_keys: HashSet<::util::Pointer<RefCell<KeyState>>>,
-}
-
-/// A builder structure for picking up layout data from storage
-pub struct LayoutData {
-    /// Point is the offset within layout
-    pub views: HashMap<String, (c::Point, View)>,
-    pub keymaps: Vec<CString>,
-    pub margins: Margins,
 }
 
 #[derive(Debug)]
@@ -705,48 +771,20 @@ impl fmt::Display for NoSuchView {
     }
 }
 
-// Unfortunately, changes are not atomic due to mutability :(
-// An error will not be recoverable
-// The usage of &mut on Rc<RefCell<KeyState>> doesn't mean anything special.
-// Cloning could also be used.
-impl Layout {
-    pub fn new(data: LayoutData, kind: ArrangementKind, purpose: ContentPurpose) -> Layout {
-        Layout {
-            kind,
-            current_view: "base".to_owned(),
-            view_latched: LatchedState::Not,
-            views: data.views,
-            keymaps: data.keymaps,
-            pressed_keys: HashSet::new(),
-            margins: data.margins,
-            purpose,
-        }
+
+impl LayoutData {
+    fn get_button(&self, button: &ButtonPosition) -> Option<&Button> {
+        let (_, view) = self.views.get(&button.view)?;
+        let (_, row) = view.rows.get(button.row)?;
+        let (_, key) = row.buttons.get(button.position_in_row)?;
+        Some(key)
     }
 
-    pub fn get_current_view_position(&self) -> &(c::Point, View) {
-        &self.views
-            .get(&self.current_view).expect("Selected nonexistent view")
+    fn find_button_place(&self, button: &ButtonPosition) -> Option<procedures::Place> {
+        let (_, view) = self.views.get(&button.view)?;
+        procedures::find_button_place(view, (button.row, button.position_in_row))
     }
-
-    pub fn get_current_view(&self) -> &View {
-        &self.views.get(&self.current_view).expect("Selected nonexistent view").1
-    }
-
-    fn set_view(&mut self, view: String) -> Result<(), NoSuchView> {
-        if self.views.contains_key(&view) {
-            self.current_view = view;
-            Ok(())
-        } else {
-            Err(NoSuchView)
-        }
-    }
-
-    // Layout is passed around mutably,
-    // so better keep the field away from direct access.
-    pub fn get_view_latched(&self) -> &LatchedState {
-        &self.view_latched
-    }
-
+    
     /// Calculates size without margins
     fn calculate_inner_size(&self) -> Size {
         View::calculate_super_size(
@@ -790,22 +828,74 @@ impl Layout {
             scale_y: 1.0,
         })
     }
+}
 
-    fn find_button_by_position(&self, point: c::Point) -> Option<ButtonPlace> {
-        let (offset, layout) = self.get_current_view_position();
-        layout.find_button_by_position(point - offset)
+// Unfortunately, changes are not atomic due to mutability :(
+// An error will not be recoverable
+// The usage of &mut on Rc<RefCell<KeyState>> doesn't mean anything special.
+// Cloning could also be used.
+impl Layout {
+    pub fn new(data: LayoutParseData, kind: ArrangementKind, purpose: ContentPurpose) -> Layout {
+        Layout {
+            shape: LayoutData {
+                kind,
+                views: data.views,
+                keymaps: data.keymaps,
+                margins: data.margins,
+                purpose,
+            },
+            state: LayoutState {
+                current_view: "base".to_owned(),
+                view_latched: LatchedState::Not,
+                active_buttons: ActiveButtons(HashMap::new()),
+            },
+        }
     }
 
+    pub fn get_current_view_position(&self) -> &(c::Point, View) {
+        &self.shape.views
+            .get(&self.state.current_view).expect("Selected nonexistent view")
+    }
+
+    pub fn get_current_view(&self) -> &View {
+        &self.shape.views.get(&self.state.current_view).expect("Selected nonexistent view").1
+    }
+
+    fn set_view(&mut self, view: String) -> Result<(), NoSuchView> {
+        if self.shape.views.contains_key(&view) {
+            self.state.current_view = view;
+            Ok(())
+        } else {
+            Err(NoSuchView)
+        }
+    }
+
+    // Layout is passed around mutably,
+    // so better keep the field away from direct access.
+    pub fn get_view_latched(&self) -> &LatchedState {
+        &self.state.view_latched
+    }
+    
+    /// Returns index within current view
+    fn find_index_by_position(&self, point: c::Point) -> Option<(usize, usize)> {
+        let (offset, view) = self.get_current_view_position();
+        view.find_button_by_position(point - offset)
+            .map(|(_b, i)| i)
+    }
+
+    /// Returns index within current view too.
     pub fn foreach_visible_button<F>(&self, mut f: F)
-        where F: FnMut(c::Point, &Box<Button>)
+        where F: FnMut(c::Point, &Button, (usize, usize))
     {
         let (view_offset, view) = self.get_current_view_position();
-        for (row_offset, row) in view.get_rows() {
-            for (x_offset, button) in &row.buttons {
+        let rows = view.get_rows().iter().enumerate();
+        for (row_idx, (row_offset, row)) in rows {
+            let buttons = row.buttons.iter().enumerate();
+            for (button_idx, (x_offset, button)) in buttons {
                 let offset = view_offset
                     + row_offset.clone()
                     + c::Point { x: *x_offset, y: 0.0 };
-                f(offset, button);
+                f(offset, button, (row_idx, button_idx));
             }
         }
     }
@@ -816,8 +906,8 @@ impl Layout {
     ) {
         let (transition, new_latched) = Layout::process_action_for_view(
             action,
-            &self.current_view,
-            &self.view_latched,
+            &self.state.current_view,
+            &self.state.view_latched,
         );
 
         match transition {
@@ -826,15 +916,15 @@ impl Layout {
             ViewTransition::NoChange => {},
         };
 
-        self.view_latched = new_latched;
+        self.state.view_latched = new_latched;
     }
 
     /// Unlatch all latched keys,
     /// so that the new view is the one before first press.
     fn unstick_locks(&mut self) {
-        if let LatchedState::FromView(name) = self.view_latched.clone() {
+        if let LatchedState::FromView(name) = self.state.view_latched.clone() {
             match self.set_view(name.clone()) {
-                Ok(_) => { self.view_latched = LatchedState::Not; }
+                Ok(_) => { self.state.view_latched = LatchedState::Not; }
                 Err(e) => log_print!(
                     logging::Level::Bug,
                     "Bad view {}, can't unlatch ({:?})",
@@ -923,27 +1013,20 @@ fn try_set_view(layout: &mut Layout, view_name: &str) {
 mod procedures {
     use super::*;
 
-    type Place<'v> = (c::Point, &'v Box<Button>);
+    pub type Place<'v> = (c::Point, &'v Button);
 
-    /// Finds all buttons referring to the key in `state`,
-    /// together with their offsets within the view.
-    pub fn find_key_places<'v, 's>(
+    /// Finds the canvas offset of the button.
+    pub fn find_button_place<'v>(
         view: &'v View,
-        state: &'s Rc<RefCell<KeyState>>
-    ) -> Vec<Place<'v>> {
-        view.get_rows().iter().flat_map(|(row_offset, row)| {
-            row.buttons.iter()
-                .filter_map(move |(x_offset, button)| {
-                    if Rc::ptr_eq(&button.state, state) {
-                        Some((
-                            row_offset + c::Point { x: *x_offset, y: 0.0 },
-                            button,
-                        ))
-                    } else {
-                        None
-                    }
-                })
-        }).collect()
+        (row, position_in_row): (usize, usize),
+    ) -> Option<Place<'v>> {
+        let (row_offset, row) = view.get_rows().get(row)?;
+        let (x_offset, button) = row.get_buttons()
+            .get(position_in_row)?;
+        Some((
+            row_offset + c::Point { x: *x_offset, y: 0.0 },
+            button,
+        ))
     }
 
     #[cfg(test)]
@@ -952,38 +1035,27 @@ mod procedures {
 
         use ::layout::test::*;
 
-        /// Checks whether the path points to the same boxed instances.
-        /// The instance constraint will be droppable
-        /// when C stops holding references to the data
+        /// Checks indexing of buttons
         #[test]
         fn view_has_button() {
-            fn as_ptr<T>(v: &Box<T>) -> *const T {
-                v.as_ref() as *const T
-            }
-
-            let state = make_state();
-            let state_clone = state.clone();
-
-            let button = make_button_with_state("1".into(), state);
-            let button_ptr = as_ptr(&button);
+            let button = make_button("1".into());
 
             let row = Row::new(vec!((0.1, button)));
 
             let view = View::new(vec!((1.2, row)));
 
             assert_eq!(
-                find_key_places(&view, &state_clone.clone()).into_iter()
-                    .map(|(place, button)| { (place, as_ptr(button)) })
-                    .collect::<Vec<_>>(),
-                vec!(
-                    (c::Point { x: 0.1, y: 1.2 }, button_ptr)
-                )
+                find_button_place(&view, (0, 0)),
+                Some((
+                    c::Point { x: 0.1, y: 1.2 },
+                    &make_button("1".into()),
+                ))
             );
 
             let view = View::new(vec![]);
             assert_eq!(
-                find_key_places(&view, &state_clone.clone()).is_empty(),
-                true
+                find_button_place(&view, (0, 0)),
+                None,
             );
         }
     }
@@ -998,54 +1070,69 @@ pub struct UIBackend {
 mod seat {
     use super::*;
 
-    pub fn handle_press_key(
-        layout: &mut Layout,
+    fn handle_press_key_cleaner(
+        shape: &LayoutData,
         submission: &mut Submission,
         time: Timestamp,
-        rckey: &Rc<RefCell<KeyState>>,
+        button_pos: &ButtonPosition,
     ) {
-        if !layout.pressed_keys.insert(::util::Pointer(rckey.clone())) {
-            log_print!(
-                logging::Level::Bug,
-                "Key {:?} was already pressed", rckey,
-            );
-        }
-        let key: KeyState = {
-            RefCell::borrow(rckey).clone()
-        };
-        let action = key.action.clone();
+        let button = shape.get_button(button_pos).unwrap();
+        let action = button.action.clone();
         match action {
             Action::Submit {
                 text: Some(text),
                 keys: _,
             } => submission.handle_press(
-                KeyState::get_id(rckey),
+                button_pos.into(),
                 SubmitData::Text(&text),
-                &key.keycodes,
+                &button.keycodes,
                 time,
             ),
             Action::Submit {
                 text: None,
                 keys: _,
             } => submission.handle_press(
-                KeyState::get_id(rckey),
+                button_pos.into(),
                 SubmitData::Keycodes,
-                &key.keycodes,
+                &button.keycodes,
                 time,
             ),
             Action::Erase => submission.handle_press(
-                KeyState::get_id(rckey),
+                button_pos.into(),
                 SubmitData::Erase,
-                &key.keycodes,
+                &button.keycodes,
                 time,
             ),
             _ => {},
         };
-        RefCell::replace(rckey, key.into_pressed());
+    }
+    
+    pub fn handle_press_key(
+        layout: &mut Layout,
+        submission: &mut Submission,
+        time: Timestamp,
+        button_pos: &ButtonPosition,
+    ) {
+        // Send messages
+        handle_press_key_cleaner(&layout.shape, submission, time, button_pos);
+    
+        // Update state
+        let find = layout.state.active_buttons.get(button_pos);
+        if let KeyState { pressed: PressType::Pressed } = find {
+            log_print!(
+                logging::Level::Bug,
+                "Button {:?} was already pressed", button_pos,
+            );
+        } else {
+            layout.state.active_buttons.insert(
+                button_pos.clone(),
+                KeyState { pressed: PressType::Pressed },
+            );
+        }
     }
 
-    pub fn handle_release_key(
-        layout: &mut Layout,
+    fn handle_release_key_cleaner(
+        shape: &LayoutData,
         submission: &mut Submission,
         ui: Option<&UIBackend>,
         time: Timestamp,
@@ -1054,28 +1141,21 @@ mod seat {
         // Eventually, it should be used for sumitting button events,
         // and passed always.
         manager: Option<(&actors::popover::State, receiver::State)>,
-        rckey: &Rc<RefCell<KeyState>>,
-    ) {
-        let key: KeyState = {
-            RefCell::borrow(rckey).clone()
-        };
-        let action = key.action.clone();
-
-        layout.apply_view_transition(&action);
-
-        // update
-        let key = key.into_released();
+        button_pos: &ButtonPosition,
+    ) -> Action{
+        let button = shape.get_button(&button_pos).unwrap();
+        let action = button.action.clone();
 
         // process non-view switching
-        match action {
+        match action.clone() {
             Action::Submit { text: _, keys: _ }
                 | Action::Erase
             => {
-                submission.handle_release(KeyState::get_id(rckey), time);
+                submission.handle_release(button_pos.into(), time);
             },
             Action::ApplyModifier(modifier) => {
                 // FIXME: key id is unneeded with stateless locks
-                let key_id = KeyState::get_id(rckey);
+                let key_id = button_pos.into();
                 let gets_locked = !submission.is_modifier_active(modifier);
                 match gets_locked {
                     true => submission.handle_add_modifier(
@@ -1089,14 +1169,9 @@ mod seat {
             Action::ShowPreferences => if let Some(ui) = &ui {
                 // only show when layout manager is available
                 if let Some((manager, app_state)) = manager {
-                    let view = layout.get_current_view();
-                    let places = ::layout::procedures::find_key_places(
-                        view, &rckey,
-                    );
-                    // Getting first item will cause mispositioning
-                    // with more than one button with the same key
-                    // on the keyboard.
-                    if let Some((position, button)) = places.get(0) {
+                    let place = shape.find_button_place(button_pos);
+
+                    if let Some((position, button)) = place {
                         let bounds = c::Bounds {
                             x: position.x,
                             y: position.y,
@@ -1115,12 +1190,45 @@ mod seat {
             // Other keys are handled in view switcher before.
             _ => {}
         };
-
-        let pointer = ::util::Pointer(rckey.clone());
+        
+        action
+    }
+    
+    /// Mutates layout and sends events.
+    /// This split away from handle_release_key
+    /// in order to pull at least some of the mutation away
+    /// from what should some day be core functional logic.
+    pub fn handle_release_key(
+        layout: &mut Layout,
+        submission: &mut Submission,
+        ui: Option<&UIBackend>,
+        time: Timestamp,
+        // TODO: intermediate measure:
+        // passing state conditionally because it's only used for popover.
+        // Eventually, it should be used for sumitting button events,
+        // and passed always.
+        manager: Option<(&actors::popover::State, receiver::State)>,
+        button_pos: &ButtonPosition,
+    ) {
+        // Send events
+        let action = handle_release_key_cleaner(
+            &layout.shape,
+            submission,
+            ui,
+            time,
+            manager,
+            button_pos,
+        );
+        
         // Apply state changes
-        layout.pressed_keys.remove(&pointer);
-        // Commit activated button state changes
-        RefCell::replace(rckey, key);
+        layout.apply_view_transition(&action);
+        
+        if let Presence::Missing = layout.state.active_buttons.remove(&button_pos) {
+            log_print!(
+                logging::Level::Bug,
+                "No button to remove from pressed list: {:?}", button_pos
+            );
+        }
     }
 }
 
@@ -1129,33 +1237,18 @@ mod test {
     use super::*;
 
     use std::ffi::CString;
-    use ::keyboard::PressType;
 
-    pub fn make_state_with_action(action: Action)
-        -> Rc<RefCell<::keyboard::KeyState>>
-    {
-        Rc::new(RefCell::new(::keyboard::KeyState {
-            pressed: PressType::Released,
-            keycodes: Vec::new(),
-            action,
-        }))
-    }
-
-    pub fn make_state() -> Rc<RefCell<::keyboard::KeyState>> {
-        make_state_with_action(Action::SetView("default".into()))
-    }
-
-    pub fn make_button_with_state(
+    pub fn make_button(
         name: String,
-        state: Rc<RefCell<::keyboard::KeyState>>,
-    ) -> Box<Button> {
-        Box::new(Button {
+    ) -> Button {
+        Button {
             name: CString::new(name.clone()).unwrap(),
             size: Size { width: 0f64, height: 0f64 },
             outline_name: CString::new("test").unwrap(),
             label: Label::Text(CString::new(name).unwrap()),
-            state: state,
-        })
+            action: Action::SetView("default".into()),
+            keycodes: Vec::new(),
+        }
     }
 
     #[test]
@@ -1204,57 +1297,61 @@ mod test {
             Row::new(vec![
                 (
                     0.0,
-                    make_button_with_state(
-                        "switch".into(),
-                        make_state_with_action(switch.clone())
-                    ),
+                    Button {
+                        action: switch.clone(),
+                        ..make_button("switch".into())
+                    },
                 ),
                 (
                     1.0,
-                    make_button_with_state(
-                        "submit".into(),
-                        make_state_with_action(submit.clone())
-                    ),
+                    Button {
+                        action: submit.clone(),
+                        ..make_button("submit".into())
+                    },
                 ),
             ]),
         )]);
 
         let mut layout = Layout {
-            current_view: "base".into(),
-            view_latched: LatchedState::Not,
-            keymaps: Vec::new(),
-            kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
-            margins: Margins {
-                top: 0.0,
-                left: 0.0,
-                right: 0.0,
-                bottom: 0.0,
+            state: LayoutState {
+                current_view: "base".into(),
+                view_latched: LatchedState::Not,
+                active_buttons: ActiveButtons(HashMap::new()),
             },
-            views: hashmap! {
-                // Both can use the same structure.
-                // Switching doesn't depend on the view shape
-                // as long as the switching button is present.
-                "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view),
+            shape: LayoutData {
+                keymaps: Vec::new(),
+                kind: ArrangementKind::Base,
+                margins: Margins {
+                    top: 0.0,
+                    left: 0.0,
+                    right: 0.0,
+                    bottom: 0.0,
+                },
+                views: hashmap! {
+                    // Both can use the same structure.
+                    // Switching doesn't depend on the view shape
+                    // as long as the switching button is present.
+                    "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view),
+                },
+                purpose: ContentPurpose::Normal,
             },
-            purpose: ContentPurpose::Normal,
         };
 
         // Basic cycle
         layout.apply_view_transition(&switch);
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&switch);
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&submit);
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&switch);
-        assert_eq!(&layout.current_view, "base");
+        assert_eq!(&layout.state.current_view, "base");
         layout.apply_view_transition(&switch);
         // Unlatch
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&submit);
-        assert_eq!(&layout.current_view, "base");
+        assert_eq!(&layout.state.current_view, "base");
     }
 
     #[test]
@@ -1280,48 +1377,52 @@ mod test {
             Row::new(vec![
                 (
                     0.0,
-                    make_button_with_state(
-                        "switch".into(),
-                        make_state_with_action(switch.clone())
-                    ),
+                    Button {
+                        action: switch.clone(),
+                        ..make_button("switch".into())
+                    },
                 ),
                 (
                     1.0,
-                    make_button_with_state(
-                        "submit".into(),
-                        make_state_with_action(submit.clone())
-                    ),
+                    Button {
+                        action: submit.clone(),
+                        ..make_button("submit".into())
+                    },
                 ),
             ]),
         )]);
 
         let mut layout = Layout {
-            current_view: "base".into(),
-            view_latched: LatchedState::Not,
-            keymaps: Vec::new(),
-            kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
-            margins: Margins {
-                top: 0.0,
-                left: 0.0,
-                right: 0.0,
-                bottom: 0.0,
+            state: LayoutState {
+                current_view: "base".into(),
+                view_latched: LatchedState::Not,
+                active_buttons: ActiveButtons(HashMap::new()),
             },
-            views: hashmap! {
-                // Both can use the same structure.
-                // Switching doesn't depend on the view shape
-                // as long as the switching button is present.
-                "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "unlocked".into() => (c::Point { x: 0.0, y: 0.0 }, view),
+            shape: LayoutData {
+                keymaps: Vec::new(),
+                kind: ArrangementKind::Base,
+                margins: Margins {
+                    top: 0.0,
+                    left: 0.0,
+                    right: 0.0,
+                    bottom: 0.0,
+                },
+                views: hashmap! {
+                    // Both can use the same structure.
+                    // Switching doesn't depend on the view shape
+                    // as long as the switching button is present.
+                    "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "unlocked".into() => (c::Point { x: 0.0, y: 0.0 }, view),
+                },
+                purpose: ContentPurpose::Normal,
             },
-            purpose: ContentPurpose::Normal,
         };
 
         layout.apply_view_transition(&switch);
-        assert_eq!(&layout.current_view, "locked");
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&unswitch);
-        assert_eq!(&layout.current_view, "unlocked");
+        assert_eq!(&layout.state.current_view, "unlocked");
     }
 
     #[test]
@@ -1347,54 +1448,58 @@ mod test {
             Row::new(vec![
                 (
                     0.0,
-                    make_button_with_state(
-                        "switch".into(),
-                        make_state_with_action(switch.clone())
-                    ),
+                    Button {
+                        action: switch.clone(),
+                        ..make_button("switch".into())
+                    },
                 ),
                 (
                     1.0,
-                    make_button_with_state(
-                        "submit".into(),
-                        make_state_with_action(submit.clone())
-                    ),
+                    Button {
+                        action: submit.clone(),
+                        ..make_button("submit".into())
+                    },
                 ),
             ]),
         )]);
 
         let mut layout = Layout {
-            current_view: "base".into(),
-            view_latched: LatchedState::Not,
-            keymaps: Vec::new(),
-            kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
-            margins: Margins {
-                top: 0.0,
-                left: 0.0,
-                right: 0.0,
-                bottom: 0.0,
+            state: LayoutState {
+                current_view: "base".into(),
+                view_latched: LatchedState::Not,
+                active_buttons: ActiveButtons(HashMap::new()),
             },
-            views: hashmap! {
-                // All can use the same structure.
-                // Switching doesn't depend on the view shape
-                // as long as the switching button is present.
-                "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
-                "ĄĘ".into() => (c::Point { x: 0.0, y: 0.0 }, view),
+            shape: LayoutData {
+                keymaps: Vec::new(),
+                kind: ArrangementKind::Base,
+                margins: Margins {
+                    top: 0.0,
+                    left: 0.0,
+                    right: 0.0,
+                    bottom: 0.0,
+                },
+                views: hashmap! {
+                    // All can use the same structure.
+                    // Switching doesn't depend on the view shape
+                    // as long as the switching button is present.
+                    "base".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "locked".into() => (c::Point { x: 0.0, y: 0.0 }, view.clone()),
+                    "ĄĘ".into() => (c::Point { x: 0.0, y: 0.0 }, view),
+                },
+                purpose: ContentPurpose::Normal,
             },
-            purpose: ContentPurpose::Normal,
         };
 
         // Latch twice, then Ąto-unlatch across 2 levels
         layout.apply_view_transition(&switch);
-        println!("{:?}", layout.view_latched);
-        assert_eq!(&layout.current_view, "locked");
+        println!("{:?}", layout.state.view_latched);
+        assert_eq!(&layout.state.current_view, "locked");
         layout.apply_view_transition(&switch_again);
-        println!("{:?}", layout.view_latched);
-        assert_eq!(&layout.current_view, "ĄĘ");
+        println!("{:?}", layout.state.view_latched);
+        assert_eq!(&layout.state.current_view, "ĄĘ");
         layout.apply_view_transition(&submit);
-        println!("{:?}", layout.view_latched);
-        assert_eq!(&layout.current_view, "base");
+        println!("{:?}", layout.state.view_latched);
+        assert_eq!(&layout.state.current_view, "base");
     }
 
     #[test]
@@ -1407,17 +1512,17 @@ mod test {
                 Row::new(vec![
                     (
                         0.0,
-                        Box::new(Button {
+                        Button {
                             size: Size { width: 5.0, height: 10.0 },
-                            ..*make_button_with_state("A".into(), make_state())
-                        }),
+                            ..make_button("A".into())
+                        },
                     ),
                     (
                         5.0,
-                        Box::new(Button {
+                        Button {
                             size: Size { width: 5.0, height: 10.0 },
-                            ..*make_button_with_state("B".into(), make_state())
-                        }),
+                            ..make_button("B".into())
+                        },
                     ),
                 ]),
             ),
@@ -1426,29 +1531,29 @@ mod test {
                 Row::new(vec![
                     (
                         0.0,
-                        Box::new(Button {
+                        Button {
                             size: Size { width: 30.0, height: 10.0 },
-                            ..*make_button_with_state("bar".into(), make_state())
-                        }),
+                            ..make_button("bar".into())
+                        },
                     ),
                 ]),
             )
         ]);
         assert!(
             view.find_button_by_position(c::Point { x: 5.0, y: 5.0 })
-                .unwrap().button.name.to_str().unwrap() == "A"
+                .unwrap().0.name.to_str().unwrap() == "A"
         );
         assert!(
             view.find_button_by_position(c::Point { x: 14.99, y: 5.0 })
-                .unwrap().button.name.to_str().unwrap() == "A"
+                .unwrap().0.name.to_str().unwrap() == "A"
         );
         assert!(
             view.find_button_by_position(c::Point { x: 15.01, y: 5.0 })
-                .unwrap().button.name.to_str().unwrap() == "B"
+                .unwrap().0.name.to_str().unwrap() == "B"
         );
         assert!(
             view.find_button_by_position(c::Point { x: 25.0, y: 5.0 })
-                .unwrap().button.name.to_str().unwrap() == "B"
+                .unwrap().0.name.to_str().unwrap() == "B"
         );
     }
 
@@ -1460,19 +1565,16 @@ mod test {
                 0.0,
                 Row::new(vec![(
                     0.0,
-                    Box::new(Button {
+                    Button {
                         size: Size { width: 1.0, height: 1.0 },
-                        ..*make_button_with_state("foo".into(), make_state())
-                    }),
+                        ..make_button("foo".into())
+                    },
                 )]),
             ),
         ]);
-        let layout = Layout {
-            current_view: String::new(),
-            view_latched: LatchedState::Not,
+        let layout = LayoutData {
             keymaps: Vec::new(),
             kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
             // Lots of bottom margin
             margins: Margins {
                 top: 0.0,
@@ -1513,19 +1615,16 @@ mod test {
                 0.0,
                 Row::new(vec![(
                     0.0,
-                    Box::new(Button {
+                    Button {
                         size: Size { width: 1.0, height: 1.0 },
-                        ..*make_button_with_state("foo".into(), make_state())
-                    }),
+                        ..make_button("foo".into())
+                    },
                 )]),
             ),
         ]);
-        let layout = Layout {
-            current_view: String::new(),
-            view_latched: LatchedState::Not,
+        let layout = LayoutData {
             keymaps: Vec::new(),
             kind: ArrangementKind::Base,
-            pressed_keys: HashSet::new(),
             margins: Margins {
                 top: 0.0,
                 left: 0.0,

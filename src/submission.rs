@@ -52,7 +52,7 @@ pub mod c {
         let submission = submission.clone_ref();
         let mut submission = submission.borrow_mut();
         let layout = unsafe { &*layout };
-        submission.use_layout(layout, Timestamp(time));
+        submission.use_layout(&layout.shape, Timestamp(time));
     }
 
     #[no_mangle]
@@ -303,7 +303,7 @@ impl Submission {
         }
     }
     
-    pub fn use_layout(&mut self, layout: &layout::Layout, time: Timestamp) {
+    pub fn use_layout(&mut self, layout: &layout::LayoutData, time: Timestamp) {
         self.keymap_fds = layout.keymaps.iter()
             .map(|keymap_str| vkeyboard::c::KeyMap::from_cstr(
                 keymap_str.as_c_str()

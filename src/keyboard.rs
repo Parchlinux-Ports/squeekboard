@@ -1,17 +1,15 @@
 /*! State of the emulated keyboard and keys.
  * Regards the keyboard as if it was composed of switches. */
 
-use std::cell::RefCell;
+use crate::action::Action;
+use crate::layout;
+use crate::util;
 use std::collections::HashMap;
 use std::fmt;
 use std::io;
 use std::mem;
 use std::ptr;
-use std::rc::Rc;
 use std::string::FromUtf8Error;
-
-use ::action::Action;
-use ::util;
 
 // Traits
 use std::io::Write;
@@ -24,7 +22,7 @@ pub enum PressType {
 }
 
 /// The extended, unambiguous layout-keycode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeyCode {
     pub code: u32,
     pub keymap_idx: usize,
@@ -49,17 +47,28 @@ bitflags!{
 }
 
 /// When the submitted actions of keys need to be tracked,
-/// they need a stable, comparable ID
+/// they need a stable, comparable ID.
+/// With layout::ButtonPosition, the IDs are unique within layouts.
 #[derive(Clone, PartialEq)]
-pub struct KeyStateId(*const KeyState);
+pub struct KeyStateId(layout::ButtonPosition);
 
-#[derive(Debug, Clone)]
-pub struct KeyState {
-    pub pressed: PressType,
+impl From<&layout::ButtonPosition> for KeyStateId {
+    fn from(v: &layout::ButtonPosition) -> Self {
+        Self(v.clone())
+    }
+}
+
+#[derive(Clone)]
+pub struct Key {
     /// A cache of raw keycodes derived from Action::Submit given a keymap
     pub keycodes: Vec<KeyCode>,
     /// Static description of what the key does when pressed or released
     pub action: Action,
+}
+
+#[derive(Debug, Clone)]
+pub struct KeyState {
+    pub pressed: PressType,
 }
 
 impl KeyState {
@@ -77,12 +86,6 @@ impl KeyState {
             pressed: PressType::Pressed,
             ..self
         }
-    }
-
-    /// KeyStates instances are the unique identifiers of pressed keys,
-    /// and the actions submitted with them.
-    pub fn get_id(keystate: &Rc<RefCell<KeyState>>) -> KeyStateId {
-        KeyStateId(keystate.as_ptr() as *const KeyState)
     }
 }
 

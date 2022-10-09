@@ -1,11 +1,10 @@
 /*! Drawing the UI */
 
 use cairo;
-use std::cell::RefCell;
 
 use ::action::{ Action, Modifier };
 use ::keyboard;
-use ::layout::{ Button, Label, LatchedState, Layout };
+use crate::layout::{ Button, ButtonPosition, Label, LatchedState, Layout };
 use ::layout::c::{ Bounds, EekGtkKeyboard, Point };
 use ::submission::c::Submission as CSubmission;
 
@@ -84,14 +83,21 @@ mod c {
         let cr = unsafe { cairo::Context::from_raw_none(cr) };
         let active_modifiers = submission.get_active_modifiers();
 
-        layout.foreach_visible_button(|offset, button| {
-            let state = RefCell::borrow(&button.state).clone();
+        layout.foreach_visible_button(|offset, button, (row, position_in_row)| {
+            // TODO: this iterator copies string indices way too much.
+            // For efficiency, it would be better to draw pressed buttons from the list first,
+            // and then iterate the rest without having to look up their indices.
+            let state = layout.state.active_buttons.get(&ButtonPosition {
+                view: layout.state.current_view.clone(),
+                row,
+                position_in_row,
+            });
 
             let locked = LockedStyle::from_action(
-                &state.action,
+                &button.action,
                 &active_modifiers,
                 layout.get_view_latched(),
-                &layout.current_view,
+                &layout.state.current_view,
             );
             if state.pressed == keyboard::PressType::Pressed
                 || locked != LockedStyle::Free
@@ -99,7 +105,7 @@ mod c {
                 render_button_at_position(
                     renderer, &cr,
                     offset,
-                    button.as_ref(),
+                    button,
                     state.pressed, locked,
                 );
             }
@@ -116,11 +122,11 @@ mod c {
         let layout = unsafe { &mut *layout };
         let cr = unsafe { cairo::Context::from_raw_none(cr) };
         
-        layout.foreach_visible_button(|offset, button| {
+        layout.foreach_visible_button(|offset, button, _index| {
             render_button_at_position(
                 renderer, &cr,
                 offset,
-                button.as_ref(),
+                button,
                 keyboard::PressType::Released,
                 LockedStyle::Free,
             );
