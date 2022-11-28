@@ -38,12 +38,6 @@
 
 pub mod driver;
 
-// This module is tightly coupled to the shape of data passed around in this project.
-// That's not a problem as long as there's only one loop.
-// They can still be abstracted into Traits,
-// and the loop parametrized over them.
-use crate::main::Commands;
-use crate::state;
 use std::cmp;
 use std::time::{ Duration, Instant };
 
@@ -55,13 +49,22 @@ pub trait Event: Clone {
     fn get_timeout_reached(&self) -> Option<Instant>;
 }
 
-/// Contains and updates the intenal state of the actor.
+/// The externally observable state of the actor.
+pub trait Outcome {
+    type Commands;
+    
+    /// Returns the instructions to emit in order to change the current visible state to the desired one.
+    fn get_commands_to_reach(&self, desired: &Self) -> Self::Commands;
+}
+
+/// Contains and calculates the intenal state of the actor.
 pub trait ActorState: Clone {
     type Event: Event;
+    type Outcome: Outcome;
     /// Returns the new internal state after the event gets processed.
     fn apply_event(self, e: Self::Event, time: Instant) -> Self;
     /// Returns the observable state of the actor given this internal state.
-    fn get_outcome(&self, time: Instant) -> state::Outcome;
+    fn get_outcome(&self, time: Instant) -> Self::Outcome;
     /// Returns the next wake up to schedule if one is needed.
     /// This may be called at any time, so should always return the correct value.
     fn get_next_wake(&self, now: Instant) -> Option<Instant>;
@@ -95,7 +98,7 @@ fn handle_event<S: ActorState>(
     mut loop_state: State<S>,
     event: S::Event,
     now: Instant,
-) -> (State<S>, Commands) {
+) -> (State<S>, <S::Outcome as Outcome>::Commands) {
     // Calculate changes to send to the consumer,
     // based on publicly visible state.
     // The internal state may change more often than the publicly visible one,
@@ -170,6 +173,7 @@ mod test {
     use crate::animation;
     use crate::imservice::{ ContentHint, ContentPurpose };
     use crate::panel;
+    use crate::state;
     use crate::state::{ Application, InputMethod, InputMethodDetails, Presence, visibility };
     use crate::state::test::application_with_fake_output;
 

@@ -130,13 +130,14 @@ pub struct Outcome {
     pub im: InputMethod,
 }
 
-impl Outcome {
+impl event_loop::Outcome for Outcome {
+    type Commands = Commands;
     /// Returns the commands needed to apply changes as required by the new state.
     /// This implementation doesn't actually take the old state into account,
     /// instead issuing all the commands as needed to reach the new state.
     /// The receivers of the commands bear the burden
     /// of checking if the commands end up being no-ops.
-    pub fn get_commands_to_reach(&self, new_state: &Self) -> Commands {
+    fn get_commands_to_reach(&self, new_state: &Self) -> Commands {
 // FIXME: handle switching outputs
         let (dbus_visible_set, panel_visibility) = match new_state.panel {
             animation::Outcome::Visible{output, height, ..}
@@ -440,6 +441,7 @@ Outcome:
 
 impl ActorState for Application {
     type Event = Event;
+    type Outcome = Outcome;
     
     fn apply_event(self, e: Self::Event, time: Instant) -> Self {
         Self::apply_event(self, e, time)
