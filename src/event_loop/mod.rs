@@ -44,9 +44,13 @@ pub mod driver;
 // and the loop parametrized over them.
 use crate::main::Commands;
 use crate::state;
-use crate::state::Event;
 use std::cmp;
 use std::time::{ Duration, Instant };
+
+
+pub trait Event: Clone {
+    fn get_timeout_reached(&self) -> Option<Instant>;
+}
 
 
 /// This keeps the state of the tracker loop between iterations
@@ -75,7 +79,7 @@ impl State {
 /// It returns the new state, and the message to send onwards.
 fn handle_event(
     mut loop_state: State,
-    event: Event,
+    event: state::Event,
     now: Instant,
 ) -> (State, Commands) {
     // Calculate changes to send to the consumer,
@@ -93,8 +97,8 @@ fn handle_event(
         .get_commands_to_reach(&new_outcome);
     
     // Timeout events are special: they affect the scheduled timeout.
-    loop_state.scheduled_wakeup = match event {
-        Event::TimeoutReached(when) => {
+    loop_state.scheduled_wakeup = match event.get_timeout_reached() {
+        Some(when) => {
             if when > now {
                 // Special handling for scheduled events coming in early.
                 // Wait at least 10 ms to avoid Zeno's paradox.
@@ -112,7 +116,7 @@ fn handle_event(
                 None
             }
         },
-        _ => loop_state.scheduled_wakeup.clone(),
+        None => loop_state.scheduled_wakeup.clone(),
     };
     
     // Reschedule timeout if the new state calls for it.

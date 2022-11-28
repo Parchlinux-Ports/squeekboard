@@ -7,6 +7,7 @@
 
 use crate::animation;
 use crate::debug;
+use crate::event_loop;
 use crate::imservice::{ ContentHint, ContentPurpose };
 use crate::layout::ArrangementKind;
 use crate::main;
@@ -78,6 +79,15 @@ pub enum Event {
     /// Use to animate state transitions.
     /// The value is the ideal arrival time.
     TimeoutReached(Instant),
+}
+
+impl event_loop::Event for Event {
+    fn get_timeout_reached(&self) -> Option<Instant> {
+        match self {
+            Self::TimeoutReached(when) => Some(*when),
+            _ => None,
+        }
+    }
 }
 
 impl From<InputMethod> for Event {
