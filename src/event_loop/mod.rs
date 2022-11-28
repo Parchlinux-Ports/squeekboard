@@ -48,15 +48,22 @@ use std::cmp;
 use std::time::{ Duration, Instant };
 
 
+/// Carries the incoming data to affect the actor state,
+/// plus an event to help schedule timed events.
 pub trait Event: Clone {
     /// Returns the value of the reached timeout, if this event carries the timeout.
     fn get_timeout_reached(&self) -> Option<Instant>;
 }
 
+/// Contains and updates the intenal state of the actor.
 pub trait ActorState: Clone {
     type Event: Event;
+    /// Returns the new internal state after the event gets processed.
     fn apply_event(self, e: Self::Event, time: Instant) -> Self;
+    /// Returns the observable state of the actor given this internal state.
     fn get_outcome(&self, time: Instant) -> state::Outcome;
+    /// Returns the next wake up to schedule if one is needed.
+    /// This may be called at any time, so should always return the correct value.
     fn get_next_wake(&self, now: Instant) -> Option<Instant>;
 }
 
