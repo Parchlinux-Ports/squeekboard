@@ -122,74 +122,7 @@ where
             let now = Instant::now();
             thread::sleep(when - now);
             sender.send(S::Event::new_timeout_reached(when))
-                .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't wake visibility manager");
+                .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't wake manager");
         });
-    }
-}
-
-/// For calling in only
-mod c {
-    use super::*;
-
-    use crate::main;
-    use crate::state::{Event, Presence};
-    use crate::state::LayoutChoice;
-    use crate::state::visibility;
-    use crate::util;
-    use crate::util::c::Wrapped;
-    use std::os::raw::c_char;
-    
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_state_send_force_visible(mgr: Wrapped<main::EventLoop>) {
-        let sender = mgr.clone_ref();
-        let sender = sender.borrow();
-        sender.send(Event::Visibility(visibility::Event::ForceVisible))
-            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
-    }
-    
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_state_send_force_hidden(sender: Wrapped<main::EventLoop>) {
-        let sender = sender.clone_ref();
-        let sender = sender.borrow();
-        sender.send(Event::Visibility(visibility::Event::ForceHidden))
-            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
-    }
-
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_state_send_keyboard_present(sender: Wrapped<main::EventLoop>, present: u32) {
-        let sender = sender.clone_ref();
-        let sender = sender.borrow();
-        let state =
-            if present == 0 { Presence::Missing }
-            else { Presence::Present };
-        sender.send(Event::PhysicalKeyboard(state))
-            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
-    }
-    
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_state_send_layout_set(
-        sender: Wrapped<main::EventLoop>,
-        name: *const c_char,
-        source: *const c_char,
-        // TODO: use when synthetic events are needed
-        _timestamp: u32,
-    ) {
-        let sender = sender.clone_ref();
-        let sender = sender.borrow();
-        let string_or_empty = |v| String::from(
-            util::c::as_str(v)
-            .unwrap_or(Some(""))
-            .unwrap_or("")
-        );
-        sender
-            .send(Event::LayoutChoice(LayoutChoice {
-                name: string_or_empty(&name),
-                source: string_or_empty(&source).into(),
-            }))
-            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
     }
 }
