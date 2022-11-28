@@ -84,9 +84,9 @@ impl<S> State<S> {
 /// - determines next scheduled animation wakeup,
 /// and because this is a pure function, it's easily testable.
 /// It returns the new state, and the message to send onwards.
-fn handle_event<S: ActorState<Event = state::Event>>(
+fn handle_event<S: ActorState>(
     mut loop_state: State<S>,
-    event: state::Event,
+    event: S::Event,
     now: Instant,
 ) -> (State<S>, Commands) {
     // Calculate changes to send to the consumer,
