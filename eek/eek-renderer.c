@@ -206,7 +206,7 @@ eek_renderer_render_keyboard (EekRenderer *self,
                               struct render_geometry geometry,
                               struct submission *submission,
                                    cairo_t     *cr,
-                              LevelKeyboard *keyboard)
+                              Layout *keyboard)
 {
     g_return_if_fail (geometry.allocation_width > 0.0);
     g_return_if_fail (geometry.allocation_height > 0.0);
@@ -316,7 +316,7 @@ renderer_init (EekRenderer *self)
 }
 
 EekRenderer *
-eek_renderer_new (LevelKeyboard  *keyboard,
+eek_renderer_new (Layout  *keyboard,
                   PangoContext *pcontext)
 {
     EekRenderer *renderer = calloc(1, sizeof(EekRenderer));

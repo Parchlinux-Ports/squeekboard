@@ -41,10 +41,10 @@ G_DECLARE_FINAL_TYPE(EekboardContextService, eekboard_context_service, EEKBOARD,
 EekboardContextService *eekboard_context_service_new(struct squeek_state_manager *state_manager);
 void eekboard_context_service_set_submission(EekboardContextService *context, struct submission *submission);
 void          eekboard_context_service_destroy (EekboardContextService *context);
-LevelKeyboard *eekboard_context_service_get_keyboard(EekboardContextService *context);
+Layout *eekboard_context_service_get_keyboard(EekboardContextService *context);
 
 void eekboard_context_service_set_keymap(EekboardContextService *context,
-                                         const LevelKeyboard *keyboard);
+                                         const Layout *keyboard);
 
 G_END_DECLS
 #endif  /* EEKBOARD_CONTEXT_SERVICE_H */
