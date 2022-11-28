@@ -18,7 +18,6 @@
 
 use crate::event_loop;
 use crate::logging;
-use crate::state::Application;
 use glib;
 use std::sync::mpsc;
 use std::thread;
@@ -36,8 +35,6 @@ type UISender<S> = glib::Sender<
     >::Commands
 >;
 
-pub type Threaded = Threaded_<Application>;
-
 /// This loop driver spawns a new thread which updates the state in a loop,
 /// in response to incoming events.
 /// It sends outcomes to the glib main loop using a channel.
@@ -47,7 +44,7 @@ pub type Threaded = Threaded_<Application>;
 // This can/should be abstracted over Event and Commands,
 // so that the C call-ins can be thrown away from here and defined near events.
 #[derive(Clone)]
-pub struct Threaded_<S>
+pub struct Threaded<S>
 where
     S: ActorState + Send,
     S::Event: Send,
@@ -57,7 +54,7 @@ where
     thread: mpsc::Sender<S::Event>,
 }
 
-impl<S> Threaded_<S>
+impl<S> Threaded<S>
 where
     // Not sure why this needs 'static. It's already owned.
     S: ActorState + Send + 'static,
@@ -134,6 +131,7 @@ where
 mod c {
     use super::*;
 
+    use crate::main;
     use crate::state::{Event, Presence};
     use crate::state::LayoutChoice;
     use crate::state::visibility;
@@ -143,7 +141,7 @@ mod c {
     
     #[no_mangle]
     pub extern "C"
-    fn squeek_state_send_force_visible(mgr: Wrapped<Threaded>) {
+    fn squeek_state_send_force_visible(mgr: Wrapped<main::EventLoop>) {
         let sender = mgr.clone_ref();
         let sender = sender.borrow();
         sender.send(Event::Visibility(visibility::Event::ForceVisible))
@@ -152,7 +150,7 @@ mod c {
     
     #[no_mangle]
     pub extern "C"
-    fn squeek_state_send_force_hidden(sender: Wrapped<Threaded>) {
+    fn squeek_state_send_force_hidden(sender: Wrapped<main::EventLoop>) {
         let sender = sender.clone_ref();
         let sender = sender.borrow();
         sender.send(Event::Visibility(visibility::Event::ForceHidden))
@@ -161,7 +159,7 @@ mod c {
 
     #[no_mangle]
     pub extern "C"
-    fn squeek_state_send_keyboard_present(sender: Wrapped<Threaded>, present: u32) {
+    fn squeek_state_send_keyboard_present(sender: Wrapped<main::EventLoop>, present: u32) {
         let sender = sender.clone_ref();
         let sender = sender.borrow();
         let state =
@@ -174,7 +172,7 @@ mod c {
     #[no_mangle]
     pub extern "C"
     fn squeek_state_send_layout_set(
-        sender: Wrapped<Threaded>,
+        sender: Wrapped<main::EventLoop>,
         name: *const c_char,
         source: *const c_char,
         // TODO: use when synthetic events are needed

@@ -7,7 +7,9 @@ use crate::actors;
 use crate::animation;
 use crate::debug;
 use crate::data::loading;
+use crate::event_loop;
 use crate::panel;
+use crate::state;
 use glib::{Continue, MainContext, PRIORITY_DEFAULT, Receiver};
 
 
@@ -46,7 +48,7 @@ mod c {
         /// The handle to which Commands should be sent
         /// for processing in the main loop.
         receiver: Wrapped<Receiver<Commands>>,
-        state_manager: Wrapped<driver::Threaded>,
+        state_manager: Wrapped<EventLoop>,
         submission: Wrapped<Submission>,
         /// Not wrapped, because C needs to access this.
         wayland: *mut Wayland,
@@ -203,6 +205,10 @@ mod c {
         }
     }
 }
+
+
+pub type EventLoop = event_loop::driver::Threaded<state::Application>;
+
 
 pub mod commands {
     use crate::animation;

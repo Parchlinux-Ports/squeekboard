@@ -10,7 +10,7 @@ use std::num::Wrapping;
 use std::string::String;
 use std::time::Instant;
 
-use crate::event_loop::driver;
+use crate::main;
 use crate::state;
 use crate::state::Event;
 use ::logging;
@@ -322,7 +322,7 @@ impl Default for IMProtocolState {
 pub struct IMService {
     /// Owned reference (still created and destroyed in C)
     pub im: c::InputMethod,
-    sender: driver::Threaded,
+    sender: main::EventLoop,
 
     pending: IMProtocolState,
     current: IMProtocolState, // turn current into an idiomatic representation?
@@ -338,7 +338,7 @@ pub enum SubmitError {
 impl IMService {
     pub fn new(
         im: c::InputMethod,
-        sender: driver::Threaded,
+        sender: main::EventLoop,
     ) -> Box<IMService> {
         // IMService will be referenced to by C,
         // so it needs to stay in the same place in memory via Box

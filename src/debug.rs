@@ -6,7 +6,7 @@
 use std::thread;
 use zbus::{Connection, ObjectServer, dbus_interface, fdo};
 
-use crate::event_loop;
+use crate::main;
 use crate::state;
 
 
@@ -15,7 +15,7 @@ use std::convert::TryInto;
 
 /// Accepts commands controlling the debug mode
 struct Manager {
-    sender: event_loop::driver::Threaded,
+    sender: main::EventLoop,
     enabled: bool,
 }
 
@@ -54,7 +54,7 @@ fn start(mgr: Manager) -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-pub fn init(sender: event_loop::driver::Threaded) {
+pub fn init(sender: main::EventLoop) {
     let mgr = Manager {
         sender,
         enabled: false,

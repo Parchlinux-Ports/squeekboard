@@ -6,8 +6,8 @@
 
 use std::ops;
 use std::vec::Vec;
-use crate::event_loop;
-use ::logging;
+use crate::logging;
+use crate::main;
 use crate::util::DivCeil;
 
 // traits
@@ -438,11 +438,11 @@ type GlobalId = u32;
 /// The outputs manager
 pub struct Outputs {
     outputs: Vec<(Output, GlobalId)>,
-    sender: event_loop::driver::Threaded,
+    sender: main::EventLoop,
 }
 
 impl Outputs {
-    pub fn new(sender: event_loop::driver::Threaded) -> Outputs {
+    pub fn new(sender: main::EventLoop) -> Outputs {
         Outputs {
             outputs: Vec::new(),
             sender,
