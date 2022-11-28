@@ -49,20 +49,27 @@ use std::time::{ Duration, Instant };
 
 
 pub trait Event: Clone {
+    /// Returns the value of the reached timeout, if this event carries the timeout.
     fn get_timeout_reached(&self) -> Option<Instant>;
 }
 
+pub trait ActorState: Clone {
+    type Event: Event;
+    fn apply_event(self, e: Self::Event, time: Instant) -> Self;
+    fn get_outcome(&self, time: Instant) -> state::Outcome;
+    fn get_next_wake(&self, now: Instant) -> Option<Instant>;
+}
 
 /// This keeps the state of the tracker loop between iterations
 #[derive(Clone)]
-struct State {
-    state: state::Application,
+struct State<S> {
+    state: S,
     scheduled_wakeup: Option<Instant>,
     last_update: Instant,
 }
 
-impl State {
-    fn new(initial_state: state::Application, now: Instant) -> Self {
+impl<S> State<S> {
+    fn new(initial_state: S, now: Instant) -> Self {
         Self {
             state: initial_state,
             scheduled_wakeup: None,
@@ -77,11 +84,11 @@ impl State {
 /// - determines next scheduled animation wakeup,
 /// and because this is a pure function, it's easily testable.
 /// It returns the new state, and the message to send onwards.
-fn handle_event(
-    mut loop_state: State,
+fn handle_event<S: ActorState<Event = state::Event>>(
+    mut loop_state: State<S>,
     event: state::Event,
     now: Instant,
-) -> (State, Commands) {
+) -> (State<S>, Commands) {
     // Calculate changes to send to the consumer,
     // based on publicly visible state.
     // The internal state may change more often than the publicly visible one,
@@ -185,7 +192,7 @@ mod test {
         
         now += animation::HIDING_TIMEOUT;
         
-        let (l, commands) = handle_event(l, Event::TimeoutReached(now), now);
+        let (l, commands) = handle_event(l, state::Event::TimeoutReached(now), now);
         assert_eq!(commands.panel_visibility, Some(panel::Command::Hide));
         assert_eq!(l.scheduled_wakeup, None);
     }

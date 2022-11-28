@@ -75,8 +75,8 @@ impl Threaded {
         self.thread.send(event)
     }
     
-    fn handle_loop_event(loop_sender: &Sender, state: event_loop::State, event: Event, ui: &UISender)
-        -> event_loop::State
+    fn handle_loop_event(loop_sender: &Sender, state: event_loop::State<Application>, event: Event, ui: &UISender)
+        -> event_loop::State<Application>
     {
         let now = Instant::now();
 

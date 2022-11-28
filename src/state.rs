@@ -8,6 +8,7 @@
 use crate::animation;
 use crate::debug;
 use crate::event_loop;
+use crate::event_loop::ActorState;
 use crate::imservice::{ ContentHint, ContentPurpose };
 use crate::layout::ArrangementKind;
 use crate::main;
@@ -435,8 +436,16 @@ Outcome:
             },
         )
     }
+}
 
-    pub fn get_outcome(&self, now: Instant) -> Outcome {
+impl ActorState for Application {
+    type Event = Event;
+    
+    fn apply_event(self, e: Self::Event, time: Instant) -> Self {
+        Self::apply_event(self, e, time)
+    }
+    
+    fn get_outcome(&self, now: Instant) -> Outcome {
         // FIXME: include physical keyboard presence
         Outcome {
             panel: match self.preferred_output {
@@ -484,7 +493,7 @@ Outcome:
     }
 
     /// Returns the next time to update the outcome.
-    pub fn get_next_wake(&self, now: Instant) -> Option<Instant> {
+    fn get_next_wake(&self, now: Instant) -> Option<Instant> {
         match self {
             Self {
                 visibility_override: visibility::State::NotForced,
