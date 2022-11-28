@@ -45,6 +45,7 @@ use std::time::{ Duration, Instant };
 /// Carries the incoming data to affect the actor state,
 /// plus an event to help schedule timed events.
 pub trait Event: Clone {
+    fn new_timeout_reached(when: Instant) -> Self;
     /// Returns the value of the reached timeout, if this event carries the timeout.
     fn get_timeout_reached(&self) -> Option<Instant>;
 }

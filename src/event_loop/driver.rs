@@ -18,21 +18,25 @@
 
 use crate::event_loop;
 use crate::logging;
-use crate::main::Commands;
-use crate::state::{ Application, Event };
+use crate::state::Application;
 use glib;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Instant;
+use super::{ActorState, Outcome};
 
 // Traits
 use crate::logging::Warn;
+use super::Event;
 
 
-/// Type of the sender that waits for external events
-type Sender = mpsc::Sender<Event>;
-/// Type of the sender that waits for internal state changes
-type UISender = glib::Sender<Commands>;
+type UISender<S> = glib::Sender<
+    <
+        <S as ActorState>::Outcome as Outcome
+    >::Commands
+>;
+
+pub type Threaded = Threaded_<Application>;
 
 /// This loop driver spawns a new thread which updates the state in a loop,
 /// in response to incoming events.
@@ -43,12 +47,27 @@ type UISender = glib::Sender<Commands>;
 // This can/should be abstracted over Event and Commands,
 // so that the C call-ins can be thrown away from here and defined near events.
 #[derive(Clone)]
-pub struct Threaded {
-    thread: Sender,
+pub struct Threaded_<S>
+where
+    S: ActorState + Send,
+    S::Event: Send,
+    <S::Outcome as Outcome>::Commands: Send,
+{
+    /// Waits for external events
+    thread: mpsc::Sender<S::Event>,
 }
 
-impl Threaded {
-    pub fn new(ui: UISender, initial_state: Application) -> Self {
+impl<S> Threaded_<S>
+where
+    // Not sure why this needs 'static. It's already owned.
+    S: ActorState + Send + 'static,
+    S::Event: Send,
+    <S::Outcome as Outcome>::Commands: Send,
+{
+    pub fn new(
+        ui: UISender<S>,
+        initial_state: S,
+    ) -> Self {
         let (sender, receiver) = mpsc::channel();
         let saved_sender = sender.clone();
         thread::spawn(move || {
@@ -71,13 +90,16 @@ impl Threaded {
         }
     }
     
-    pub fn send(&self, event: Event) -> Result<(), mpsc::SendError<Event>> {
+    pub fn send(&self, event: S::Event) -> Result<(), mpsc::SendError<S::Event>> {
         self.thread.send(event)
     }
     
-    fn handle_loop_event(loop_sender: &Sender, state: event_loop::State<Application>, event: Event, ui: &UISender)
-        -> event_loop::State<Application>
-    {
+    fn handle_loop_event(
+        loop_sender: &mpsc::Sender<S::Event>,
+        state: event_loop::State<S>,
+        event: S::Event, 
+        ui: &UISender<S>,
+    ) -> event_loop::State<S> {
         let now = Instant::now();
 
         let (new_state, commands) = event_loop::handle_event(state.clone(), event, now);
@@ -94,12 +116,15 @@ impl Threaded {
         new_state
     }
 
-    fn schedule_timeout_wake(loop_sender: &Sender, when: Instant) {
+    fn schedule_timeout_wake(
+        loop_sender: &mpsc::Sender<S::Event>,
+        when: Instant,
+    ) {
         let sender = loop_sender.clone();
         thread::spawn(move || {
             let now = Instant::now();
             thread::sleep(when - now);
-            sender.send(Event::TimeoutReached(when))
+            sender.send(S::Event::new_timeout_reached(when))
                 .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't wake visibility manager");
         });
     }
@@ -109,7 +134,7 @@ impl Threaded {
 mod c {
     use super::*;
 
-    use crate::state::Presence;
+    use crate::state::{Event, Presence};
     use crate::state::LayoutChoice;
     use crate::state::visibility;
     use crate::util;

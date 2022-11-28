@@ -83,6 +83,10 @@ pub enum Event {
 }
 
 impl event_loop::Event for Event {
+    fn new_timeout_reached(when: Instant) -> Self {
+        Self::TimeoutReached(when)
+    }
+
     fn get_timeout_reached(&self) -> Option<Instant> {
         match self {
             Self::TimeoutReached(when) => Some(*when),
