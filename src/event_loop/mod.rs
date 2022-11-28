@@ -184,6 +184,9 @@ mod test {
         }
     }
 
+    // TODO: This should only test the scheduling in handle_event.
+    // This means it should be separated from actual application logic,
+    // and use a mock state instead.
     #[test]
     fn schedule_hide() {
         let start = Instant::now(); // doesn't matter when. It would be better to have a reproducible value though
