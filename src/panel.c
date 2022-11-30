@@ -55,6 +55,16 @@ make_widget (struct panel_manager *self)
 }
 
 
+// Called also from rust
+/// Updates the size
+void
+panel_manager_resize (struct panel_manager *self, uint32_t height)
+{
+    phosh_layer_surface_set_size(self->window, 0, height);
+    phosh_layer_surface_set_exclusive_zone(self->window, height);
+    phosh_layer_surface_wl_surface_commit(self->window);
+}
+
 // Called from rust
 /// Creates a new panel widget
 void
@@ -89,6 +99,8 @@ panel_manager_request_widget (struct panel_manager *self, struct wl_output *outp
         gtk_window_set_title (GTK_WINDOW(self->window), "Squeekboard");
         gtk_window_set_icon_name (GTK_WINDOW(self->window), "squeekboard");
         gtk_window_set_keep_above (GTK_WINDOW(self->window), TRUE);
+    } else {
+        panel_manager_resize(self, height);
     }
 
     if (!self->widget) {
@@ -97,17 +109,6 @@ panel_manager_request_widget (struct panel_manager *self, struct wl_output *outp
 
     gtk_widget_show (GTK_WIDGET(self->window));
 }
-
-// Called from rust
-/// Updates the size
-void
-panel_manager_resize (struct panel_manager *self, uint32_t height)
-{
-    phosh_layer_surface_set_size(self->window, 0, height);
-    phosh_layer_surface_set_exclusive_zone(self->window, height);
-    phosh_layer_surface_wl_surface_commit(self->window);
-}
-
 
 struct panel_manager panel_manager_new(EekboardContextService *state, struct submission *submission, struct squeek_state_manager *state_manager, struct squeek_popover *popover)
 {

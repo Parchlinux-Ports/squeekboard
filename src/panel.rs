@@ -132,6 +132,10 @@ pub enum Command {
 pub struct Manager {
     panel: c::PanelManager,
     state: State,
+    // This should be part of State, if it ever actually gets unhardcoded.
+    // It's here because State doesn't need to become more complex
+    // until this becomes properly used.
+    debug: bool,
 }
 
 impl Manager {
@@ -139,11 +143,16 @@ impl Manager {
         Self {
             panel,
             state: State::Hidden,
+            debug: false,
         }
     }
     // TODO: mabe send the allocated size back to state::State,
     // to perform layout adjustments
     fn set_configured(&mut self, size: Size) {
+        if self.debug {
+            eprintln!("Panel received configure {:?}", &size);
+        }
+
         self.state = match self.state.clone() {
             State::Hidden => {
                 // This may happen if a hide is scheduled immediately after a show.
@@ -166,6 +175,10 @@ impl Manager {
                 allocated: size,
             },
         };
+
+        if self.debug {
+            eprintln!("Panel now {:?}", &self.state);
+        }
     }
 
     pub fn update(mgr: Wrapped<Manager>, cmd: Command) {
@@ -173,6 +186,10 @@ impl Manager {
 
         let mgr = mgr.clone_ref();
         let mut mgr = mgr.borrow_mut();
+        
+        if mgr.debug {
+            eprintln!("Panel received {:?}", &cmd);
+        }
 
         (*mgr).state = match (cmd, mgr.state.clone()) {
             (Command::Hide, State::Hidden) => State::Hidden,
@@ -186,6 +203,9 @@ impl Manager {
             },
             (Command::Show{output, height}, State::Hidden) => {
                 let height = height.as_scaled_ceiling();
+                if mgr.debug {
+                    eprintln!("Panel requests widget {:?}", (&output.0, &height));
+                }
                 unsafe { c::panel_manager_request_widget(mgr.panel, output.0, height, copied); }
                 State::SizeRequested{output, height}
             },
@@ -210,6 +230,9 @@ impl Manager {
                     // for the purpose of handling it better somehow.
                     State::SizeRequested{output: req_output, height: req_height}
                 } else {
+                    if mgr.debug {
+                        eprintln!("Panel requests widget {:?}", (&output.0, &height));
+                    }
                     // This looks weird, but should be safe.
                     // The stack seems to handle
                     // configure events on a dead surface.
@@ -242,6 +265,10 @@ impl Manager {
                     State::SizeRequested{output, height}
                 }
             },
+        };
+        
+        if mgr.debug {
+            eprintln!("Panel is now {:?}", &(*mgr).state);
         }
     }
 }
