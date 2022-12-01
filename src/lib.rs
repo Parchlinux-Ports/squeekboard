@@ -26,7 +26,6 @@ mod action;
 mod actors;
 mod animation;
 pub mod data;
-mod debug;
 mod drawing;
 mod event_loop;
 pub mod float_ord;

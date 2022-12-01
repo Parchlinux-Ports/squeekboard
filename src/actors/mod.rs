@@ -20,4 +20,5 @@ and by receiving updates from it.
 // Panel contains state and logic to protect the main state from getting flooded
 // with low-level wayland and gtk sizing events.
 
+pub mod external;
 pub mod popover;

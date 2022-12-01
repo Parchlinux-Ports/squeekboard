@@ -4,8 +4,8 @@
 
 /*! Glue for the main loop. */
 use crate::actors;
+use crate::actors::external::debug;
 use crate::animation;
-use crate::debug;
 use crate::data::loading;
 use crate::event_loop;
 use crate::panel;
