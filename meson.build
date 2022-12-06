@@ -99,7 +99,7 @@ cargo_toml_base = configure_file(
 cargo_patch = []
 
 if get_option('newer') == true
-    cargo_build_flags += ['--features', 'glib_v0_14']
+    cargo_build_flags += ['--features', 'glib_v0_14,zbus_v1_5']
     cargo_deps = files('Cargo.deps.newer')
     cargo_lock = files('Cargo.lock.newer')
 else

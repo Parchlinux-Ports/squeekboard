@@ -7,3 +7,5 @@
 /*! Contains actors with custom event loops, not based off of the event_loop module. */
  
 pub mod debug;
+#[cfg(feature = "zbus_v1_5")]
+pub mod screensaver;

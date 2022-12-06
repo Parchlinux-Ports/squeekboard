@@ -23,7 +23,7 @@ mod assert_matches;
 mod logging;
 
 mod action;
-mod actors;
+pub mod actors;
 mod animation;
 pub mod data;
 mod drawing;

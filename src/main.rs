@@ -121,6 +121,10 @@ mod c {
         };
         let submission = Submission::new(vk, imservice);
         
+        // dummy for now
+        #[cfg(feature = "zbus_v1_5")]
+        crate::actors::external::screensaver::init(crate::actors::external::screensaver::Destination);
+        
         RsObjects {
             submission: Wrapped::new(submission),
             state_manager: Wrapped::new(state_manager),
