@@ -9,3 +9,6 @@
 pub mod debug;
 #[cfg(feature = "zbus_v1_5")]
 pub mod screensaver;
+
+/// The uninhabited type. Cannot be created or returned; means "will never return" as return type. Useful for infinite loops.
+enum Void {}

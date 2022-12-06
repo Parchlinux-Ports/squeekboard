@@ -3,10 +3,11 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
+use crate::logging;
 use std::thread;
 use zbus::{Connection, dbus_proxy};
 
-use crate::logging;
+use super::Void;
 
 
 #[derive(Debug)]
@@ -45,7 +46,7 @@ pub fn init(destination: Destination) {
     });
 }
 
-fn start(destination: Destination) -> Result<(), zbus::Error> {
+fn start(destination: Destination) -> Result<Void, zbus::Error> {
     let conn = Connection::new_session()?;
     let manager = ManagerProxy::new(&conn)?;
 
