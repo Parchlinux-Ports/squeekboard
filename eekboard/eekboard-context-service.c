@@ -57,7 +57,7 @@ struct _EekboardContextService {
     GObject parent;
     struct squeek_state_manager *state_manager; // shared reference
 
-    LevelKeyboard *keyboard; // currently used keyboard
+    Layout *keyboard; // currently used keyboard
     GSettings *settings; // Owned reference
 
     /// Needed for keymap changes after keyboard updates.
@@ -127,9 +127,9 @@ settings_get_layout(GSettings *settings, char **type, char **layout)
 }
 
 void eekboard_context_service_set_layout(EekboardContextService *context, char *style_name, struct squeek_layout *layout, uint32_t timestamp) {
-    LevelKeyboard *keyboard = level_keyboard_new(style_name, layout);
+    Layout *keyboard = layout_new(style_name, layout);
     // set as current
-    LevelKeyboard *previous_keyboard = context->keyboard;
+    Layout *previous_keyboard = context->keyboard;
     context->keyboard = keyboard;
     // Update the keymap if necessary.
     // TODO: Update submission on change event
@@ -142,7 +142,7 @@ void eekboard_context_service_set_layout(EekboardContextService *context, char *
 
     // replacing the keyboard above will cause the previous keyboard to get destroyed from the UI side (eek_gtk_keyboard_dispose)
     if (previous_keyboard) {
-        level_keyboard_free(previous_keyboard);
+        layout_free(previous_keyboard);
     }
 }
 
@@ -264,7 +264,7 @@ eekboard_context_service_destroy (EekboardContextService *context)
  * Get keyboard currently active in @context.
  * Returns: (transfer none): an #EekKeyboard
  */
-LevelKeyboard *
+Layout *
 eekboard_context_service_get_keyboard (EekboardContextService *context)
 {
     return context->keyboard;

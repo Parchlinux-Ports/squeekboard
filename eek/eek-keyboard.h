@@ -39,17 +39,14 @@ struct keymap {
 };
 
 /// Keyboard info holder
-struct _LevelKeyboard {
+struct _Layout {
     char style_name[20]; // The name of the css class on layout
     struct squeek_layout *layout; // owned
 };
-typedef struct _LevelKeyboard LevelKeyboard;
 
-gchar *eek_keyboard_get_keymap(LevelKeyboard *keyboard);
-
-LevelKeyboard*
-level_keyboard_new (char *style_name, struct squeek_layout *layout);
-void level_keyboard_free(LevelKeyboard *self);
+Layout*
+layout_new (char *style_name, struct squeek_layout *layout);
+void layout_free(Layout *self);
 
 G_END_DECLS
 #endif  /* EEK_KEYBOARD_H */

@@ -7,6 +7,8 @@
 
 use crate::animation;
 use crate::debug;
+use crate::event_loop;
+use crate::event_loop::ActorState;
 use crate::imservice::{ ContentHint, ContentPurpose };
 use crate::layout::ArrangementKind;
 use crate::main;
@@ -80,6 +82,19 @@ pub enum Event {
     TimeoutReached(Instant),
 }
 
+impl event_loop::Event for Event {
+    fn new_timeout_reached(when: Instant) -> Self {
+        Self::TimeoutReached(when)
+    }
+
+    fn get_timeout_reached(&self) -> Option<Instant> {
+        match self {
+            Self::TimeoutReached(when) => Some(*when),
+            _ => None,
+        }
+    }
+}
+
 impl From<InputMethod> for Event {
     fn from(im: InputMethod) -> Self {
         Self::InputMethod(im)
@@ -119,13 +134,14 @@ pub struct Outcome {
     pub im: InputMethod,
 }
 
-impl Outcome {
+impl event_loop::Outcome for Outcome {
+    type Commands = Commands;
     /// Returns the commands needed to apply changes as required by the new state.
     /// This implementation doesn't actually take the old state into account,
     /// instead issuing all the commands as needed to reach the new state.
     /// The receivers of the commands bear the burden
     /// of checking if the commands end up being no-ops.
-    pub fn get_commands_to_reach(&self, new_state: &Self) -> Commands {
+    fn get_commands_to_reach(&self, new_state: &Self) -> Commands {
 // FIXME: handle switching outputs
         let (dbus_visible_set, panel_visibility) = match new_state.panel {
             animation::Outcome::Visible{output, height, ..}
@@ -425,8 +441,17 @@ Outcome:
             },
         )
     }
+}
 
-    pub fn get_outcome(&self, now: Instant) -> Outcome {
+impl ActorState for Application {
+    type Event = Event;
+    type Outcome = Outcome;
+    
+    fn apply_event(self, e: Self::Event, time: Instant) -> Self {
+        Self::apply_event(self, e, time)
+    }
+    
+    fn get_outcome(&self, now: Instant) -> Outcome {
         // FIXME: include physical keyboard presence
         Outcome {
             panel: match self.preferred_output {
@@ -474,7 +499,7 @@ Outcome:
     }
 
     /// Returns the next time to update the outcome.
-    pub fn get_next_wake(&self, now: Instant) -> Option<Instant> {
+    fn get_next_wake(&self, now: Instant) -> Option<Instant> {
         match self {
             Self {
                 visibility_override: visibility::State::NotForced,

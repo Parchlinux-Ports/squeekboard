@@ -58,7 +58,7 @@ struct render_geometry {
 };
 
 GType            eek_renderer_get_type         (void) G_GNUC_CONST;
-EekRenderer     *eek_renderer_new              (LevelKeyboard     *keyboard,
+EekRenderer     *eek_renderer_new              (Layout     *keyboard,
                                                 PangoContext    *pcontext);
 void             eek_renderer_set_scale_factor (EekRenderer     *renderer,
                                                 gint             scale);
@@ -68,7 +68,7 @@ cairo_surface_t *eek_renderer_get_icon_surface(const gchar     *icon_name,
                                                 gint             scale);
 
 void             eek_renderer_render_keyboard  (EekRenderer     *renderer, struct render_geometry geometry, struct submission *submission,
-                                                cairo_t         *cr, LevelKeyboard *keyboard);
+                                                cairo_t         *cr, Layout *keyboard);
 void
 eek_renderer_free (EekRenderer        *self);
 

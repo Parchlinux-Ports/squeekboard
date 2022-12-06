@@ -53,7 +53,7 @@ typedef struct _EekGtkKeyboardPrivate
     struct squeek_state_manager *state_manager; // shared reference
     struct submission *submission; // unowned reference
 
-    LevelKeyboard *keyboard; // unowned reference; it's kept in server-context
+    Layout *keyboard; // unowned reference; it's kept in server-context
 
     GdkEventSequence *sequence; // unowned reference
     LfbEvent *event;

@@ -7,7 +7,9 @@ use crate::actors;
 use crate::animation;
 use crate::debug;
 use crate::data::loading;
+use crate::event_loop;
 use crate::panel;
+use crate::state;
 use glib::{Continue, MainContext, PRIORITY_DEFAULT, Receiver};
 
 
@@ -46,7 +48,7 @@ mod c {
         /// The handle to which Commands should be sent
         /// for processing in the main loop.
         receiver: Wrapped<Receiver<Commands>>,
-        state_manager: Wrapped<driver::Threaded>,
+        state_manager: Wrapped<EventLoop>,
         submission: Wrapped<Submission>,
         /// Not wrapped, because C needs to access this.
         wayland: *mut Wayland,
@@ -89,6 +91,8 @@ mod c {
         // given that dbus handler is using glib.
         fn dbus_handler_set_visible(dbus: *const DBusHandler, visible: u8);
     }
+    
+    // INITIALIZATION
 
     /// Creates what's possible in Rust to eliminate as many FFI calls as possible,
     /// because types aren't getting checked across their boundaries,
@@ -202,7 +206,75 @@ mod c {
             }
         }
     }
+    
+    // EVENT PASSING    
+
+    use crate::logging;
+    use crate::state::{Event, Presence};
+    use crate::state::LayoutChoice;
+    use crate::state::visibility;
+    use crate::util;
+    
+    use logging::Warn;
+    
+    #[no_mangle]
+    pub extern "C"
+    fn squeek_state_send_force_visible(mgr: Wrapped<EventLoop>) {
+        let sender = mgr.clone_ref();
+        let sender = sender.borrow();
+        sender.send(Event::Visibility(visibility::Event::ForceVisible))
+            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
+    }
+    
+    #[no_mangle]
+    pub extern "C"
+    fn squeek_state_send_force_hidden(sender: Wrapped<EventLoop>) {
+        let sender = sender.clone_ref();
+        let sender = sender.borrow();
+        sender.send(Event::Visibility(visibility::Event::ForceHidden))
+            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
+    }
+
+    #[no_mangle]
+    pub extern "C"
+    fn squeek_state_send_keyboard_present(sender: Wrapped<EventLoop>, present: u32) {
+        let sender = sender.clone_ref();
+        let sender = sender.borrow();
+        let state =
+            if present == 0 { Presence::Missing }
+            else { Presence::Present };
+        sender.send(Event::PhysicalKeyboard(state))
+            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
+    }
+    
+    #[no_mangle]
+    pub extern "C"
+    fn squeek_state_send_layout_set(
+        sender: Wrapped<EventLoop>,
+        name: *const c_char,
+        source: *const c_char,
+        // TODO: use when synthetic events are needed
+        _timestamp: u32,
+    ) {
+        let sender = sender.clone_ref();
+        let sender = sender.borrow();
+        let string_or_empty = |v| String::from(
+            util::c::as_str(v)
+            .unwrap_or(Some(""))
+            .unwrap_or("")
+        );
+        sender
+            .send(Event::LayoutChoice(LayoutChoice {
+                name: string_or_empty(&name),
+                source: string_or_empty(&source).into(),
+            }))
+            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
+    }
 }
+
+
+pub type EventLoop = event_loop::driver::Threaded<state::Application>;
+
 
 pub mod commands {
     use crate::animation;

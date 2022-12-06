@@ -18,21 +18,22 @@
 
 use crate::event_loop;
 use crate::logging;
-use crate::main::Commands;
-use crate::state::{ Application, Event };
 use glib;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Instant;
+use super::{ActorState, Outcome};
 
 // Traits
 use crate::logging::Warn;
+use super::Event;
 
 
-/// Type of the sender that waits for external events
-type Sender = mpsc::Sender<Event>;
-/// Type of the sender that waits for internal state changes
-type UISender = glib::Sender<Commands>;
+type UISender<S> = glib::Sender<
+    <
+        <S as ActorState>::Outcome as Outcome
+    >::Commands
+>;
 
 /// This loop driver spawns a new thread which updates the state in a loop,
 /// in response to incoming events.
@@ -43,12 +44,27 @@ type UISender = glib::Sender<Commands>;
 // This can/should be abstracted over Event and Commands,
 // so that the C call-ins can be thrown away from here and defined near events.
 #[derive(Clone)]
-pub struct Threaded {
-    thread: Sender,
+pub struct Threaded<S>
+where
+    S: ActorState + Send,
+    S::Event: Send,
+    <S::Outcome as Outcome>::Commands: Send,
+{
+    /// Waits for external events
+    thread: mpsc::Sender<S::Event>,
 }
 
-impl Threaded {
-    pub fn new(ui: UISender, initial_state: Application) -> Self {
+impl<S> Threaded<S>
+where
+    // Not sure why this needs 'static. It's already owned.
+    S: ActorState + Send + 'static,
+    S::Event: Send,
+    <S::Outcome as Outcome>::Commands: Send,
+{
+    pub fn new(
+        ui: UISender<S>,
+        initial_state: S,
+    ) -> Self {
         let (sender, receiver) = mpsc::channel();
         let saved_sender = sender.clone();
         thread::spawn(move || {
@@ -71,13 +87,16 @@ impl Threaded {
         }
     }
     
-    pub fn send(&self, event: Event) -> Result<(), mpsc::SendError<Event>> {
+    pub fn send(&self, event: S::Event) -> Result<(), mpsc::SendError<S::Event>> {
         self.thread.send(event)
     }
     
-    fn handle_loop_event(loop_sender: &Sender, state: event_loop::State, event: Event, ui: &UISender)
-        -> event_loop::State
-    {
+    fn handle_loop_event(
+        loop_sender: &mpsc::Sender<S::Event>,
+        state: event_loop::State<S>,
+        event: S::Event, 
+        ui: &UISender<S>,
+    ) -> event_loop::State<S> {
         let now = Instant::now();
 
         let (new_state, commands) = event_loop::handle_event(state.clone(), event, now);
@@ -94,79 +113,16 @@ impl Threaded {
         new_state
     }
 
-    fn schedule_timeout_wake(loop_sender: &Sender, when: Instant) {
+    fn schedule_timeout_wake(
+        loop_sender: &mpsc::Sender<S::Event>,
+        when: Instant,
+    ) {
         let sender = loop_sender.clone();
         thread::spawn(move || {
             let now = Instant::now();
             thread::sleep(when - now);
-            sender.send(Event::TimeoutReached(when))
-                .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't wake visibility manager");
+            sender.send(S::Event::new_timeout_reached(when))
+                .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't wake manager");
         });
-    }
-}
-
-/// For calling in only
-mod c {
-    use super::*;
-
-    use crate::state::Presence;
-    use crate::state::LayoutChoice;
-    use crate::state::visibility;
-    use crate::util;
-    use crate::util::c::Wrapped;
-    use std::os::raw::c_char;
-    
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_state_send_force_visible(mgr: Wrapped<Threaded>) {
-        let sender = mgr.clone_ref();
-        let sender = sender.borrow();
-        sender.send(Event::Visibility(visibility::Event::ForceVisible))
-            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
-    }
-    
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_state_send_force_hidden(sender: Wrapped<Threaded>) {
-        let sender = sender.clone_ref();
-        let sender = sender.borrow();
-        sender.send(Event::Visibility(visibility::Event::ForceHidden))
-            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
-    }
-
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_state_send_keyboard_present(sender: Wrapped<Threaded>, present: u32) {
-        let sender = sender.clone_ref();
-        let sender = sender.borrow();
-        let state =
-            if present == 0 { Presence::Missing }
-            else { Presence::Present };
-        sender.send(Event::PhysicalKeyboard(state))
-            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
-    }
-    
-    #[no_mangle]
-    pub extern "C"
-    fn squeek_state_send_layout_set(
-        sender: Wrapped<Threaded>,
-        name: *const c_char,
-        source: *const c_char,
-        // TODO: use when synthetic events are needed
-        _timestamp: u32,
-    ) {
-        let sender = sender.clone_ref();
-        let sender = sender.borrow();
-        let string_or_empty = |v| String::from(
-            util::c::as_str(v)
-            .unwrap_or(Some(""))
-            .unwrap_or("")
-        );
-        sender
-            .send(Event::LayoutChoice(LayoutChoice {
-                name: string_or_empty(&name),
-                source: string_or_empty(&source).into(),
-            }))
-            .or_warn(&mut logging::Print, logging::Problem::Warning, "Can't send to state manager");
     }
 }

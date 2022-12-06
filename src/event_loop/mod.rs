@@ -38,27 +38,49 @@
 
 pub mod driver;
 
-// This module is tightly coupled to the shape of data passed around in this project.
-// That's not a problem as long as there's only one loop.
-// They can still be abstracted into Traits,
-// and the loop parametrized over them.
-use crate::main::Commands;
-use crate::state;
-use crate::state::Event;
 use std::cmp;
 use std::time::{ Duration, Instant };
 
 
+/// Carries the incoming data to affect the actor state,
+/// plus an event to help schedule timed events.
+pub trait Event: Clone {
+    fn new_timeout_reached(when: Instant) -> Self;
+    /// Returns the value of the reached timeout, if this event carries the timeout.
+    fn get_timeout_reached(&self) -> Option<Instant>;
+}
+
+/// The externally observable state of the actor.
+pub trait Outcome {
+    type Commands;
+    
+    /// Returns the instructions to emit in order to change the current visible state to the desired one.
+    fn get_commands_to_reach(&self, desired: &Self) -> Self::Commands;
+}
+
+/// Contains and calculates the intenal state of the actor.
+pub trait ActorState: Clone {
+    type Event: Event;
+    type Outcome: Outcome;
+    /// Returns the new internal state after the event gets processed.
+    fn apply_event(self, e: Self::Event, time: Instant) -> Self;
+    /// Returns the observable state of the actor given this internal state.
+    fn get_outcome(&self, time: Instant) -> Self::Outcome;
+    /// Returns the next wake up to schedule if one is needed.
+    /// This may be called at any time, so should always return the correct value.
+    fn get_next_wake(&self, now: Instant) -> Option<Instant>;
+}
+
 /// This keeps the state of the tracker loop between iterations
 #[derive(Clone)]
-struct State {
-    state: state::Application,
+struct State<S> {
+    state: S,
     scheduled_wakeup: Option<Instant>,
     last_update: Instant,
 }
 
-impl State {
-    fn new(initial_state: state::Application, now: Instant) -> Self {
+impl<S> State<S> {
+    fn new(initial_state: S, now: Instant) -> Self {
         Self {
             state: initial_state,
             scheduled_wakeup: None,
@@ -73,11 +95,11 @@ impl State {
 /// - determines next scheduled animation wakeup,
 /// and because this is a pure function, it's easily testable.
 /// It returns the new state, and the message to send onwards.
-fn handle_event(
-    mut loop_state: State,
-    event: Event,
+fn handle_event<S: ActorState>(
+    mut loop_state: State<S>,
+    event: S::Event,
     now: Instant,
-) -> (State, Commands) {
+) -> (State<S>, <S::Outcome as Outcome>::Commands) {
     // Calculate changes to send to the consumer,
     // based on publicly visible state.
     // The internal state may change more often than the publicly visible one,
@@ -93,8 +115,8 @@ fn handle_event(
         .get_commands_to_reach(&new_outcome);
     
     // Timeout events are special: they affect the scheduled timeout.
-    loop_state.scheduled_wakeup = match event {
-        Event::TimeoutReached(when) => {
+    loop_state.scheduled_wakeup = match event.get_timeout_reached() {
+        Some(when) => {
             if when > now {
                 // Special handling for scheduled events coming in early.
                 // Wait at least 10 ms to avoid Zeno's paradox.
@@ -112,7 +134,7 @@ fn handle_event(
                 None
             }
         },
-        _ => loop_state.scheduled_wakeup.clone(),
+        None => loop_state.scheduled_wakeup.clone(),
     };
     
     // Reschedule timeout if the new state calls for it.
@@ -152,6 +174,7 @@ mod test {
     use crate::animation;
     use crate::imservice::{ ContentHint, ContentPurpose };
     use crate::panel;
+    use crate::state;
     use crate::state::{ Application, InputMethod, InputMethodDetails, Presence, visibility };
     use crate::state::test::application_with_fake_output;
 
@@ -162,6 +185,9 @@ mod test {
         }
     }
 
+    // TODO: This should only test the scheduling in handle_event.
+    // This means it should be separated from actual application logic,
+    // and use a mock state instead.
     #[test]
     fn schedule_hide() {
         let start = Instant::now(); // doesn't matter when. It would be better to have a reproducible value though
@@ -181,7 +207,7 @@ mod test {
         
         now += animation::HIDING_TIMEOUT;
         
-        let (l, commands) = handle_event(l, Event::TimeoutReached(now), now);
+        let (l, commands) = handle_event(l, state::Event::TimeoutReached(now), now);
         assert_eq!(commands.panel_visibility, Some(panel::Command::Hide));
         assert_eq!(l.scheduled_wakeup, None);
     }
