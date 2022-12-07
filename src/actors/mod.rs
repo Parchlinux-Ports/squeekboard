@@ -22,3 +22,12 @@ and by receiving updates from it.
 
 pub mod external;
 pub mod popover;
+
+/// The implementing actor is able to receive and handle messages.
+/// Typically, it's the sending end of the channel,
+/// whose other end is inside an event loop.
+// TODO: implement for remaning actors and make the event loop refer to this.
+pub trait Destination {
+    type Event;
+    fn send(&self, event: Self::Event);
+}

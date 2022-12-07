@@ -21,6 +21,8 @@ mod c {
     use std::rc::Rc;
     use std::time::Instant;
 
+    use crate::actors::Destination;
+    use crate::actors::popover;
     use crate::event_loop::driver;
     use crate::imservice::IMService;
     use crate::imservice::c::InputMethod;
@@ -130,7 +132,7 @@ mod c {
             state_manager: Wrapped::new(state_manager),
             receiver: Wrapped::new(receiver),
             wayland: Box::into_raw(wayland),
-            popover: Wrapped::new(actors::popover::State::new()),
+            popover: Wrapped::new(actors::popover::State::new(true)),
         }
     }
 
@@ -174,7 +176,7 @@ mod c {
     fn main_loop_handle_message(
         msg: Commands,
         panel_manager: Wrapped<panel::Manager>,
-        popover: &actors::popover::c::Actor,
+        popover: &actors::popover::c::Destination,
         hint_manager: HintManager,
         dbus_handler: *const DBusHandler,
     ) {
@@ -195,7 +197,7 @@ mod c {
                 overlay_name,
                 purpose,
             } = description;
-            actors::popover::set_overlay(popover, overlay_name.clone());
+            popover.send(popover::Event::Overlay(overlay_name.clone()));
             let layout = loading::load_layout(&name, kind, purpose, &overlay_name);
             let layout = Box::into_raw(Box::new(layout));
             // CSS can't express "+" in the class
