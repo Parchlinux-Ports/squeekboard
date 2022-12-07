@@ -15,6 +15,7 @@ pub mod c {
     use std::os::raw::c_char;
     use std::rc::Rc;
     use std::str::Utf8Error;
+    use std::sync::{Arc, Mutex};
 
     // traits
     
@@ -128,6 +129,53 @@ pub mod c {
     }
 
     impl<T> COpaquePtr for Wrapped<T> {}
+    
+    /// Similar to Wrapped, except thread-safe.
+    #[repr(transparent)]
+    pub struct ArcWrapped<T>(*const Mutex<T>);
+    
+    impl<T> ArcWrapped<T> {
+        pub fn new(value: T) -> Self {
+            Self::wrap(Arc::new(Mutex::new(value)))
+        }
+        pub fn wrap(state: Arc<Mutex<T>>) -> Self {
+            Self(Arc::into_raw(state))
+        }
+        /// Extracts the reference to the data.
+        /// It may cause problems if attempted in more than one place
+        pub unsafe fn unwrap(self) -> Arc<Mutex<T>> {
+            Arc::from_raw(self.0)
+        }
+        
+        /// Creates a new Rc reference to the same data.
+        /// Use for accessing the underlying data as a reference.
+        pub fn clone_ref(&self) -> Arc<Mutex<T>> {
+            // A bit dangerous: the Rc may be in use elsewhere
+            let used_rc = unsafe { Arc::from_raw(self.0) };
+            let rc = used_rc.clone();
+            Arc::into_raw(used_rc); // prevent dropping the original reference
+            rc
+        }
+    }
+    
+    impl<T> Clone for ArcWrapped<T> {
+        fn clone(&self) -> Self {
+            Self::wrap(self.clone_ref())
+        }
+    }
+    
+    /// ToOwned won't work here
+    impl<T: Clone> CloneOwned for ArcWrapped<T> {
+        type Owned = T;
+
+        fn clone_owned(&self) -> T {
+            let rc = self.clone_ref();
+            // FIXME: this panic here is inelegant.
+            // It will only happen in case of crashes elsewhere, but still.
+            let r = rc.lock().unwrap();
+            r.to_owned()
+        }
+    }
 }
 
 /// Clones the underlying data structure, like ToOwned.
