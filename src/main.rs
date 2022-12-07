@@ -30,7 +30,7 @@ mod c {
     use crate::outputs::Outputs;
     use crate::state;
     use crate::submission::Submission;
-    use crate::util::c::Wrapped;
+    use crate::util::c::{ArcWrapped, Wrapped};
     use crate::vkeyboard::c::ZwpVirtualKeyboardV1;
     
     /// DbusHandler*
@@ -132,7 +132,7 @@ mod c {
             state_manager: Wrapped::new(state_manager),
             receiver: Wrapped::new(receiver),
             wayland: Box::into_raw(wayland),
-            popover: Wrapped::new(actors::popover::State::new(true)),
+            popover: ArcWrapped::new(actors::popover::State::new(true)),
         }
     }
 
