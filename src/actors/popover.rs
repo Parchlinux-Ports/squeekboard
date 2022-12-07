@@ -13,7 +13,7 @@ and updated by main state every time it changes.
 */
 use crate::logging;
 use std::borrow::BorrowMut;
-use super::Destination;
+use std::sync::{Arc, Mutex};
 
 pub mod c {
     use super::*;
@@ -23,21 +23,19 @@ pub mod c {
     /// and therefore can't have a channel to receive messages,
     /// so instead messages will be passed directly to the mutexed actor.
     pub type Actor = ArcWrapped<State>;
-    /// It's the same because the state is a simple mutex-protected type.
-    /// There are no channels involved.
-    pub type Destination = ArcWrapped<State>;
 }
+
+pub type Destination = Arc<Mutex<State>>;
 
 pub enum Event {
     Overlay(Option<String>),
     ScreensaverActive(bool),
 }
 
-impl Destination for c::Destination {
+impl super::Destination for Destination {
     type Event = Event;
     fn send(&self, event: Self::Event) {
-        let actor = self.clone_ref();
-        let actor = actor.lock();
+        let actor = self.lock();
         match actor {
             Ok(mut actor) => {
                 let actor = actor.borrow_mut();

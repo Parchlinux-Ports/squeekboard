@@ -3,17 +3,14 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
+use crate::actors::Destination;
+use crate::actors::popover;
 use crate::logging;
 use std::thread;
 use zbus::{Connection, dbus_proxy};
 
 use super::Void;
 
-
-#[derive(Debug)]
-enum Event {
-    ScreensaverActive(bool),
-}
 
 #[dbus_proxy(
     interface = "org.freedesktop.ScreenSaver",
@@ -25,16 +22,8 @@ pub trait Manager {
     fn active_changed(&self, active: bool) -> fdo::Result<()>;
 }
 
-pub struct Destination;
-
-impl Destination {
-    fn send(&self, event: Event) {
-        dbg!(event);
-    }
-}
-
 /// Listens to screensaver (screen lock) changes
-pub fn init(destination: Destination) {
+pub fn init(destination: popover::Destination) {
     thread::spawn(move || {
         if let Err(e) = start(destination) {
             log_print!(
@@ -46,12 +35,12 @@ pub fn init(destination: Destination) {
     });
 }
 
-fn start(destination: Destination) -> Result<Void, zbus::Error> {
+fn start(destination: popover::Destination) -> Result<Void, zbus::Error> {
     let conn = Connection::new_session()?;
     let manager = ManagerProxy::new(&conn)?;
 
     manager.connect_active_changed(move |m| {
-        destination.send(Event::ScreensaverActive(m));
+        destination.send(popover::Event::ScreensaverActive(m));
         Ok(())
     })?;
 

@@ -123,16 +123,17 @@ mod c {
         };
         let submission = Submission::new(vk, imservice);
         
-        // dummy for now
+        let popover = ArcWrapped::new(actors::popover::State::new(true));
+
         #[cfg(feature = "zbus_v1_5")]
-        crate::actors::external::screensaver::init(crate::actors::external::screensaver::Destination);
+        crate::actors::external::screensaver::init(popover.clone_ref());
         
         RsObjects {
             submission: Wrapped::new(submission),
             state_manager: Wrapped::new(state_manager),
             receiver: Wrapped::new(receiver),
             wayland: Box::into_raw(wayland),
-            popover: ArcWrapped::new(actors::popover::State::new(true)),
+             popover,
         }
     }
 
@@ -158,7 +159,7 @@ mod c {
                 main_loop_handle_message(
                     msg,
                     panel_manager.clone(),
-                    &popover,
+                    &popover.clone_ref(),
                     hint_manager,
                     dbus_handler,
                 );
@@ -176,7 +177,7 @@ mod c {
     fn main_loop_handle_message(
         msg: Commands,
         panel_manager: Wrapped<panel::Manager>,
-        popover: &actors::popover::c::Destination,
+        popover: &actors::popover::Destination,
         hint_manager: HintManager,
         dbus_handler: *const DBusHandler,
     ) {
