@@ -27,6 +27,7 @@ pub mod c {
 
 pub type Destination = Arc<Mutex<State>>;
 
+#[derive(Debug)]
 pub enum Event {
     Overlay(Option<String>),
     ScreensaverActive(bool),
@@ -50,7 +51,7 @@ impl super::Destination for Destination {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct State {
     pub overlay: Option<String>,
     /// Settings button active
