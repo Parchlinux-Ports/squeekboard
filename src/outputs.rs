@@ -11,7 +11,7 @@ use crate::main;
 use crate::util::DivCeil;
 
 // traits
-use ::logging::Warn;
+use crate::logging::Warn;
 
 /// Gathers stuff defined in C or called by C
 pub mod c {
@@ -20,7 +20,7 @@ pub mod c {
     use std::os::raw::{ c_char, c_void };
     use std::ptr;
 
-    use ::util::c::{COpaquePtr, Wrapped};
+    use crate::util::c::{COpaquePtr, Wrapped};
 
     // Defined in C
 

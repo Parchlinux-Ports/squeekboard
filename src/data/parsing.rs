@@ -14,19 +14,19 @@ use xkbcommon::xkb;
 
 use super::{ Error, LoadError };
 
-use ::action;
+use crate::action;
 use crate::keyboard::{
     Key, generate_keymaps, generate_keycodes, KeyCode, FormattingError
 };
-use ::layout;
-use ::logging;
-use ::resources;
+use crate::layout;
+use crate::logging;
+use crate::resources;
 
 // traits, derives
 use serde::Deserialize;
 use std::io::BufReader;
 use std::iter::FromIterator;
-use ::logging::Warn;
+use crate::logging::Warn;
 
 // TODO: find a nice way to make sure non-positive sizes don't break layouts
 
@@ -153,7 +153,7 @@ impl Layout {
     }
 
     pub fn build<H: logging::Handler>(self, mut warning_handler: H)
-        -> (Result<::layout::LayoutParseData, FormattingError>, H)
+        -> (Result<crate::layout::LayoutParseData, FormattingError>, H)
     {
         let button_names = self.views.values()
             .flat_map(|rows| {
@@ -164,7 +164,7 @@ impl Layout {
         let button_names: HashSet<&str>
             = HashSet::from_iter(button_names);
 
-        let button_actions: Vec<(&str, ::action::Action)>
+        let button_actions: Vec<(&str, crate::action::Action)>
             = button_names.iter().map(|name| {(
                 *name,
                 create_action(
@@ -182,7 +182,7 @@ impl Layout {
         let button_states = HashMap::<String, Key>::from_iter(
             button_actions.into_iter().map(|(name, action)| {
                 let keycodes = match &action {
-                    ::action::Action::Submit { text: _, keys } => {
+                    crate::action::Action::Submit { text: _, keys } => {
                         keys.iter().map(|named_keysym| {
                             symbolmap.get(named_keysym.0.as_str())
                                 .expect(
@@ -292,7 +292,7 @@ fn create_action<H: logging::Handler>(
     name: &str,
     view_names: Vec<&String>,
     warning_handler: &mut H,
-) -> ::action::Action {
+) -> crate::action::Action {
     let default_meta = ButtonMeta::default();
     let symbol_meta = button_info.get(name)
         .unwrap_or(&default_meta);
@@ -356,7 +356,7 @@ fn create_action<H: logging::Handler>(
     match submission {
         SubmitData::Action(
             Action::SetView(view_name)
-        ) => ::action::Action::SetView(
+        ) => crate::action::Action::SetView(
             filter_view_name(
                 name, view_name.clone(), &view_names,
                 warning_handler,
@@ -366,7 +366,7 @@ fn create_action<H: logging::Handler>(
             lock_view, unlock_view,
             pops,
             looks_locked_from,
-        }) => ::action::Action::LockView {
+        }) => crate::action::Action::LockView {
             lock: filter_view_name(
                 name,
                 lock_view.clone(),
@@ -384,11 +384,11 @@ fn create_action<H: logging::Handler>(
         },
         SubmitData::Action(
             Action::ShowPrefs
-        ) => ::action::Action::ShowPreferences,
+        ) => crate::action::Action::ShowPreferences,
         SubmitData::Action(Action::Erase) => action::Action::Erase,
-        SubmitData::Keysym(keysym) => ::action::Action::Submit {
+        SubmitData::Keysym(keysym) => crate::action::Action::Submit {
             text: None,
-            keys: vec!(::action::KeySym(
+            keys: vec!(crate::action::KeySym(
                 match keysym_valid(keysym.as_str()) {
                     true => keysym.clone(),
                     false => {
@@ -404,7 +404,7 @@ fn create_action<H: logging::Handler>(
                 }
             )),
         },
-        SubmitData::Text(text) => ::action::Action::Submit {
+        SubmitData::Text(text) => crate::action::Action::Submit {
             text: CString::new(text.clone()).or_warn(
                 warning_handler,
                 logging::Problem::Warning,
@@ -412,7 +412,7 @@ fn create_action<H: logging::Handler>(
             ),
             keys: text.chars().map(|codepoint| {
                 let codepoint_string = codepoint.to_string();
-                ::action::KeySym(match keysym_valid(codepoint_string.as_str()) {
+                crate::action::KeySym(match keysym_valid(codepoint_string.as_str()) {
                     true => codepoint_string,
                     false => format!("U{:04X}", codepoint as u32),
                 })
@@ -452,7 +452,7 @@ fn create_button<H: logging::Handler>(
     name: &str,
     data: Key,
     warning_handler: &mut H,
-) -> ::layout::Button {
+) -> crate::layout::Button {
     let cname = CString::new(name.clone())
         .expect("Bad name");
     // don't remove, because multiple buttons with the same name are allowed
@@ -462,13 +462,13 @@ fn create_button<H: logging::Handler>(
 
     // TODO: move conversion to the C/Rust boundary
     let label = if let Some(label) = &button_meta.label {
-        ::layout::Label::Text(CString::new(label.as_str())
+        crate::layout::Label::Text(CString::new(label.as_str())
             .expect("Bad label"))
     } else if let Some(icon) = &button_meta.icon {
-        ::layout::Label::IconName(CString::new(icon.as_str())
+        crate::layout::Label::IconName(CString::new(icon.as_str())
             .expect("Bad icon"))
     } else if let Some(text) = &button_meta.text {
-        ::layout::Label::Text(
+        crate::layout::Label::Text(
             CString::new(text.as_str())
                 .or_warn(
                     warning_handler,
@@ -477,7 +477,7 @@ fn create_button<H: logging::Handler>(
                 ).unwrap_or_else(|| CString::new("").unwrap())
         )
     } else {
-        ::layout::Label::Text(cname.clone())
+        crate::layout::Label::Text(cname.clone())
     };
 
     let outline_name = match &button_meta.outline {
@@ -541,7 +541,7 @@ mod tests {
     
     use std::env;
     
-    use ::logging::ProblemPanic;
+    use crate::logging::ProblemPanic;
 
     fn path_from_root(file: &'static str) -> PathBuf {
         let source_dir = env::var("SOURCE_DIR")
@@ -637,7 +637,7 @@ mod tests {
                 .get_rows()[0].1
                 .get_buttons()[0].1
                 .label,
-            ::layout::Label::Text(CString::new("test").unwrap())
+            crate::layout::Label::Text(CString::new("test").unwrap())
         );
     }
 
@@ -652,7 +652,7 @@ mod tests {
                 .get_rows()[0].1
                 .get_buttons()[0].1
                 .label,
-            ::layout::Label::Text(CString::new("test").unwrap())
+            crate::layout::Label::Text(CString::new("test").unwrap())
         );
     }
 
@@ -717,9 +717,9 @@ mod tests {
                 Vec::new(),
                 &mut ProblemPanic,
             ),
-            ::action::Action::Submit {
+            crate::action::Action::Submit {
                 text: Some(CString::new(".").unwrap()),
-                keys: vec!(::action::KeySym("U002E".into())),
+                keys: vec!(crate::action::KeySym("U002E".into())),
             },
         );
     }

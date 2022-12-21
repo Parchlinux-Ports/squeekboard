@@ -151,7 +151,7 @@ impl event_loop::Outcome for Outcome {
 
         // Compare the old and new states as not to flood with updates,
         // which may look up in the file system.
-        use animation::Outcome::*;
+        use crate::animation::Outcome::*;
         let layout_selection = match &new_state.panel {
             Visible{ contents: new_contents, ..} => {
                 let same

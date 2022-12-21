@@ -208,7 +208,7 @@ fn translate_layout_names(layouts: &Vec<LayoutId>) -> Vec<OwnedTranslation> {
     }
 
     // Attempt to take all xkb names from gnome-desktop's xkb info.
-    let xkb_translator = ::locale::XkbInfo::new();
+    let xkb_translator = crate::locale::XkbInfo::new();
 
     let translated_names = layouts.iter()
         .map(|id| match id {

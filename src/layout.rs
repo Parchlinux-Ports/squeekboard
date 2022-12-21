@@ -1033,7 +1033,7 @@ mod procedures {
     mod test {
         use super::*;
 
-        use ::layout::test::*;
+        use crate::layout::test::*;
 
         /// Checks indexing of buttons
         #[test]

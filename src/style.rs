@@ -19,10 +19,10 @@
 /*! CSS data loading. */
 
 use std::env;
-use ::logging;
+use crate::logging;
 
 use glib::prelude::ObjectExt;
-use logging::Warn;
+use crate::logging::Warn;
 
 /// Gathers stuff defined in C or called by C
 pub mod c {

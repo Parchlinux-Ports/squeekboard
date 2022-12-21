@@ -1,7 +1,7 @@
 /*! Testing functionality */
 
-use ::data::parsing::Layout;
-use ::logging;
+use crate::data::parsing::Layout;
+use crate::logging;
 use xkbcommon::xkb;
 
 
@@ -9,7 +9,7 @@ pub struct CountAndPrint(u32);
 
 impl logging::Handler for CountAndPrint {
     fn handle(&mut self, level: logging::Level, warning: &str) {
-        use logging::Level::*;
+        use crate::logging::Level::*;
         match level {
             Panic | Bug | Error | Warning | Surprise => {
                 self.0 += 1;
