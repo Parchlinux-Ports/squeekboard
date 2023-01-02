@@ -21,14 +21,14 @@ use std::collections::HashSet;
 use std::ffi::CString;
 
 use crate::vkeyboard::c::ZwpVirtualKeyboardV1;
-use ::action::Modifier;
-use ::imservice;
-use ::imservice::IMService;
-use ::keyboard::{ KeyCode, KeyStateId, Modifiers, PressType };
-use ::layout;
-use ::util::vec_remove;
-use ::vkeyboard;
-use ::vkeyboard::VirtualKeyboard;
+use crate::action::Modifier;
+use crate::imservice;
+use crate::imservice::IMService;
+use crate::keyboard::{ KeyCode, KeyStateId, Modifiers, PressType };
+use crate::layout;
+use crate::util::vec_remove;
+use crate::vkeyboard;
+use crate::vkeyboard::VirtualKeyboard;
 
 // traits
 use std::iter::FromIterator;

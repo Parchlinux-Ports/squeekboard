@@ -215,7 +215,7 @@ mod c {
     use crate::state::visibility;
     use crate::util;
     
-    use logging::Warn;
+    use crate::logging::Warn;
     
     #[no_mangle]
     pub extern "C"

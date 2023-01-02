@@ -13,12 +13,12 @@ use std::time::Instant;
 use crate::main;
 use crate::state;
 use crate::state::Event;
-use ::logging;
-use ::util::c::into_cstring;
+use crate::logging;
+use crate::util::c::into_cstring;
 
 // Traits
 use std::convert::TryFrom;
-use ::logging::Warn;
+use crate::logging::Warn;
 
 
 /// Gathers stuff defined in C or called by C

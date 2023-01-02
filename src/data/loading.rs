@@ -192,7 +192,7 @@ fn iter_layout_sources(
 }
 
 fn load_layout_data(source: DataSource)
-    -> Result<::layout::LayoutParseData, LoadError>
+    -> Result<crate::layout::LayoutParseData, LoadError>
 {
     let handler = logging::Print {};
     match source {
@@ -268,7 +268,7 @@ pub fn load_layout(
 mod tests {
     use super::*;
 
-    use ::logging::ProblemPanic;
+    use crate::logging::ProblemPanic;
 
     #[test]
     fn parsing_fallback() {

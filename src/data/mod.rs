@@ -10,7 +10,7 @@ pub mod parsing;
 use std::io;
 use std::fmt;
 
-use ::keyboard::FormattingError;
+use crate::keyboard::FormattingError;
 
 /// Errors encountered loading the layout into yaml
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 /*! Managing the events belonging to virtual-keyboard interface. */
 
-use ::keyboard::{ Modifiers, PressType };
-use ::submission::Timestamp;
+use crate::keyboard::{ Modifiers, PressType };
+use crate::submission::Timestamp;
 
 /// Standard xkb keycode
 type KeyCode = u32;

@@ -2,11 +2,11 @@
 
 use cairo;
 
-use ::action::{ Action, Modifier };
-use ::keyboard;
+use crate::action::{ Action, Modifier };
+use crate::keyboard;
 use crate::layout::{ Button, ButtonPosition, Label, LatchedState, Layout };
-use ::layout::c::{ Bounds, EekGtkKeyboard, Point };
-use ::submission::c::Submission as CSubmission;
+use crate::layout::c::{ Bounds, EekGtkKeyboard, Point };
+use crate::submission::c::Submission as CSubmission;
 
 use glib::translate::FromGlibPtrNone;
 use gtk::prelude::WidgetExt;

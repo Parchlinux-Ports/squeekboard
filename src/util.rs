@@ -1,7 +1,7 @@
 /*! Assorted helpers */
 use std::rc::Rc;
 
-use ::float_ord::FloatOrd;
+use crate::float_ord::FloatOrd;
 
 use std::borrow::Borrow;
 use std::hash::{ Hash, Hasher };

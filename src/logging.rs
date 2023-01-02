@@ -112,7 +112,7 @@ pub enum Problem {
 // TODO: avoid, deprecate.
 // Handler instances should be long lived, not one per call.
 macro_rules! log_print {
-    ($level:expr, $($arg:tt)*) => (::logging::print($level, &format!($($arg)*)))
+    ($level:expr, $($arg:tt)*) => (crate::logging::print($level, &format!($($arg)*)))
 }
 
 /// Approach 2
