@@ -3,12 +3,13 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
-use std::thread;
-use zbus::{Connection, ObjectServer, dbus_interface, fdo};
-
 use crate::main;
 use crate::state;
 
+use std::thread;
+use zbus::{Connection, ObjectServer, dbus_interface, fdo};
+
+use super::Void;
 
 use std::convert::TryInto;
 
@@ -37,7 +38,7 @@ impl Manager {
     }
 }
 
-fn start(mgr: Manager) -> Result<(), Box<dyn std::error::Error>> {
+fn start(mgr: Manager) -> Result<Void, Box<dyn std::error::Error>> {
     let connection = Connection::new_session()?;
     fdo::DBusProxy::new(&connection)?.request_name(
         "sm.puri.SqueekDebug",

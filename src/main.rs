@@ -4,8 +4,8 @@
 
 /*! Glue for the main loop. */
 use crate::actors;
+use crate::actors::external::debug;
 use crate::animation;
-use crate::debug;
 use crate::data::loading;
 use crate::event_loop;
 use crate::panel;
@@ -21,6 +21,8 @@ mod c {
     use std::rc::Rc;
     use std::time::Instant;
 
+    use crate::actors::Destination;
+    use crate::actors::popover;
     use crate::event_loop::driver;
     use crate::imservice::IMService;
     use crate::imservice::c::InputMethod;
@@ -28,7 +30,7 @@ mod c {
     use crate::outputs::Outputs;
     use crate::state;
     use crate::submission::Submission;
-    use crate::util::c::Wrapped;
+    use crate::util::c::{ArcWrapped, Wrapped};
     use crate::vkeyboard::c::ZwpVirtualKeyboardV1;
     
     /// DbusHandler*
@@ -121,12 +123,17 @@ mod c {
         };
         let submission = Submission::new(vk, imservice);
         
+        let popover = ArcWrapped::new(actors::popover::State::new(true));
+
+        #[cfg(feature = "zbus_v1_5")]
+        crate::actors::external::screensaver::init(popover.clone_ref());
+        
         RsObjects {
             submission: Wrapped::new(submission),
             state_manager: Wrapped::new(state_manager),
             receiver: Wrapped::new(receiver),
             wayland: Box::into_raw(wayland),
-            popover: Wrapped::new(actors::popover::State::new()),
+             popover,
         }
     }
 
@@ -152,7 +159,7 @@ mod c {
                 main_loop_handle_message(
                     msg,
                     panel_manager.clone(),
-                    &popover,
+                    &popover.clone_ref(),
                     hint_manager,
                     dbus_handler,
                 );
@@ -170,7 +177,7 @@ mod c {
     fn main_loop_handle_message(
         msg: Commands,
         panel_manager: Wrapped<panel::Manager>,
-        popover: &actors::popover::c::Actor,
+        popover: &actors::popover::Destination,
         hint_manager: HintManager,
         dbus_handler: *const DBusHandler,
     ) {
@@ -191,7 +198,7 @@ mod c {
                 overlay_name,
                 purpose,
             } = description;
-            actors::popover::set_overlay(popover, overlay_name.clone());
+            popover.send(popover::Event::Overlay(overlay_name.clone()));
             let layout = loading::load_layout(&name, kind, purpose, &overlay_name);
             let layout = Box::into_raw(Box::new(layout));
             // CSS can't express "+" in the class

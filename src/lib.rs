@@ -23,10 +23,9 @@ mod assert_matches;
 mod logging;
 
 mod action;
-mod actors;
+pub mod actors;
 mod animation;
 pub mod data;
-mod debug;
 mod drawing;
 mod event_loop;
 pub mod float_ord;

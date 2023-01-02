@@ -5,8 +5,8 @@
 /*! Application-wide state is stored here.
  * It's driven by the loop defined in the loop module. */
 
+use crate::actors::external::debug;
 use crate::animation;
-use crate::debug;
 use crate::event_loop;
 use crate::event_loop::ActorState;
 use crate::imservice::{ ContentHint, ContentPurpose };
