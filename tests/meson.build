@@ -80,6 +80,7 @@ foreach layout : [
     'gr', 'gr_wide',
     'gr+polytonic',
     'fr+bepo', 'fr+bepo_wide',
+    'hu', 'hu_wide',
     'il',
     'ir',
     'it',
