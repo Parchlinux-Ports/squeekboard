@@ -75,7 +75,7 @@ struct keymap squeek_key_map_from_str(const char *keymap_str) {
     if ((void*)ptr == (void*)-1) {
         g_error("Failed to set up mmap");
     }
-    strncpy(ptr, xkb_keymap_str, keymap_len);
+    strlcpy(ptr, xkb_keymap_str, keymap_len);
     munmap(ptr, keymap_len);
     free(xkb_keymap_str);
     xkb_keymap_unref(keymap);
