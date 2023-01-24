@@ -143,18 +143,17 @@ type SingleKeyMap = [Option<String>; 256];
 
 fn single_key_map_new() -> SingleKeyMap {
     // Why can't we just initialize arrays without tricks -_- ?
-    unsafe {
-        // Inspired by
-        // https://www.reddit.com/r/rust/comments/5n7bh1/how_to_create_an_array_of_a_type_with_clone_but/
-        #[cfg(feature = "rustc_less_1_36")]
-        let mut array: SingleKeyMap = mem::uninitialized();
-        #[cfg(not(feature = "rustc_less_1_36"))]
-        let mut array: SingleKeyMap = mem::MaybeUninit::uninit().assume_init();
+    // Inspired by
+    // https://www.reddit.com/r/rust/comments/5n7bh1/how_to_create_an_array_of_a_type_with_clone_but/
+    let mut array = mem::MaybeUninit::<SingleKeyMap>::uninit();
 
-        for element in array.iter_mut() {
+    unsafe {
+        let arref = &mut *array.as_mut_ptr();
+        for element in arref.iter_mut() {
             ptr::write(element, None);
         }
-        array
+
+        array.assume_init()
     }
 }
 

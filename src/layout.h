@@ -3,7 +3,6 @@
 
 #include <inttypes.h>
 #include <glib.h>
-#include "eek/eek-element.h"
 #include "eek/eek-gtk-keyboard.h"
 #include "eek/eek-renderer.h"
 #include "eek/eek-types.h"

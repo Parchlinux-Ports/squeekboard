@@ -153,7 +153,7 @@ pub mod c {
             // A bit dangerous: the Rc may be in use elsewhere
             let used_rc = unsafe { Arc::from_raw(self.0) };
             let rc = used_rc.clone();
-            Arc::into_raw(used_rc); // prevent dropping the original reference
+            let _ = Arc::into_raw(used_rc); // prevent dropping the original reference
             rc
         }
     }
