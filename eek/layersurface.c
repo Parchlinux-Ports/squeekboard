@@ -109,8 +109,9 @@ layer_surface_configure (void                         *data,
   }
 
   g_debug ("Configured %s (%p) (%dx%d)", priv->namespace, self, width, height);
-  if (changed)
+  if (changed) {
     g_signal_emit (self, signals[CONFIGURED], 0);
+  }
 }
 
 
@@ -611,27 +612,32 @@ phosh_layer_surface_set_size (PhoshLayerSurface *self, int width, int height)
   g_return_if_fail (PHOSH_IS_LAYER_SURFACE (self));
   priv = phosh_layer_surface_get_instance_private (self);
 
-  if (priv->height == height && priv->width == width)
+  if (priv->height == height && priv->width == width) {
     return;
+  }
 
   old_width = priv->width;
   old_height = priv->height;
 
-  if (width != -1)
+  if (width != -1) {
     priv->width = width;
+  }
 
-  if (height != -1)
+  if (height != -1) {
     priv->height = height;
+  }
 
   if (gtk_widget_get_mapped (GTK_WIDGET (self))) {
     zwlr_layer_surface_v1_set_size (priv->layer_surface, priv->width, priv->height);
   }
 
-  if (priv->height != old_height)
+  if (priv->height != old_height) {
     g_object_notify_by_pspec (G_OBJECT (self), props[PHOSH_LAYER_SURFACE_PROP_LAYER_HEIGHT]);
+  }
 
-  if (priv->width != old_width)
+  if (priv->width != old_width) {
     g_object_notify_by_pspec (G_OBJECT (self), props[PHOSH_LAYER_SURFACE_PROP_LAYER_WIDTH]);
+  }
 }
 
 
@@ -659,25 +665,31 @@ phosh_layer_surface_set_margins (PhoshLayerSurface *self, int top, int right, in
   old_right = priv->margin_right;
   old_bottom = priv->margin_bottom;
 
-  if (old_top == top && old_left == left && old_right == right && old_bottom == bottom)
+  if (old_top == top && old_left == left && old_right == right && old_bottom == bottom) {
     return;
+  }
 
   priv->margin_top = top;
   priv->margin_left = left;
   priv->margin_right = right;
   priv->margin_bottom = bottom;
 
-  if (priv->layer_surface)
+  if (priv->layer_surface) {
     zwlr_layer_surface_v1_set_margin (priv->layer_surface, top, right, bottom, left);
+  }
 
-  if (old_top != top)
+  if (old_top != top) {
     g_object_notify_by_pspec (G_OBJECT (self), props[PHOSH_LAYER_SURFACE_PROP_MARGIN_TOP]);
-  if (old_bottom != bottom)
+  }
+  if (old_bottom != bottom) {
     g_object_notify_by_pspec (G_OBJECT (self), props[PHOSH_LAYER_SURFACE_PROP_MARGIN_BOTTOM]);
-  if (old_left != left)
+  }
+  if (old_left != left) {
     g_object_notify_by_pspec (G_OBJECT (self), props[PHOSH_LAYER_SURFACE_PROP_MARGIN_LEFT]);
-  if (old_right != right)
+  }
+  if (old_right != right) {
     g_object_notify_by_pspec (G_OBJECT (self), props[PHOSH_LAYER_SURFACE_PROP_MARGIN_RIGHT]);
+  }
 }
 
 
@@ -699,13 +711,15 @@ phosh_layer_surface_set_exclusive_zone (PhoshLayerSurface *self, int zone)
 
   old_zone = priv->exclusive_zone;
 
-  if (old_zone == zone)
+  if (old_zone == zone) {
     return;
+  }
 
   priv->exclusive_zone = zone;
 
-  if (priv->layer_surface)
+  if (priv->layer_surface) {
     zwlr_layer_surface_v1_set_exclusive_zone (priv->layer_surface, zone);
+  }
 
   g_object_notify_by_pspec (G_OBJECT (self), props[PHOSH_LAYER_SURFACE_PROP_EXCLUSIVE_ZONE]);
 }
@@ -726,13 +740,15 @@ phosh_layer_surface_set_kbd_interactivity (PhoshLayerSurface *self, gboolean int
   g_return_if_fail (PHOSH_IS_LAYER_SURFACE (self));
   priv = phosh_layer_surface_get_instance_private (self);
 
-  if (priv->kbd_interactivity == interactivity)
+  if (priv->kbd_interactivity == interactivity) {
     return;
+  }
 
   priv->kbd_interactivity = interactivity;
 
-  if (priv->layer_surface)
+  if (priv->layer_surface) {
     zwlr_layer_surface_v1_set_keyboard_interactivity (priv->layer_surface, interactivity);
+  }
 
   g_object_notify_by_pspec (G_OBJECT (self), props[PHOSH_LAYER_SURFACE_PROP_KBD_INTERACTIVITY]);
 }
@@ -753,13 +769,15 @@ phosh_layer_surface_set_layer (PhoshLayerSurface *self, guint32 layer)
   g_return_if_fail (PHOSH_IS_LAYER_SURFACE (self));
   priv = phosh_layer_surface_get_instance_private (self);
 
-  if (priv->layer == layer)
+  if (priv->layer == layer) {
     return;
+  }
 
   priv->layer = layer;
 
-  if (priv->layer_surface)
+  if (priv->layer_surface) {
     zwlr_layer_surface_v1_set_layer (priv->layer_surface, layer);
+  }
 
   g_object_notify_by_pspec (G_OBJECT (self), props[PHOSH_LAYER_SURFACE_PROP_LAYER]);
 }
@@ -779,8 +797,9 @@ phosh_layer_surface_wl_surface_commit (PhoshLayerSurface *self)
   g_return_if_fail (PHOSH_IS_LAYER_SURFACE (self));
   priv = phosh_layer_surface_get_instance_private (self);
 
-  if (priv->wl_surface)
+  if (priv->wl_surface) {
     wl_surface_commit (priv->wl_surface);
+  }
 }
 
 
@@ -792,17 +811,21 @@ phosh_layer_surface_get_margins (PhoshLayerSurface *self, int *top, int *right, 
   g_return_if_fail (PHOSH_IS_LAYER_SURFACE (self));
   priv = phosh_layer_surface_get_instance_private (self);
 
-  if (top)
+  if (top) {
     *top = priv->margin_top;
+  }
 
-  if (right)
+  if (right) {
     *right = priv->margin_right;
+  }
 
-  if (bottom)
+  if (bottom) {
     *bottom = priv->margin_bottom;
+  }
 
-  if (left)
+  if (left) {
     *left = priv->margin_left;
+  }
 }
 
 
