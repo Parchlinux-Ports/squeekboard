@@ -1,3 +1,81 @@
+squeekboard (1.21.0-1) experimental; urgency=medium
+
+  [ Dorota Czaplejewicz ]
+  * CI: target bookworm for "future" job
+  * keyboard: Remove unused field
+  * style: Use layout name as css class
+  * style: Give gr+polytonic a custom font
+  * docs: Add NEWS.md
+  * docs: Remove obsolete amber instructions
+  * docs: Update Cargo.lock instructions
+  * repo: Add missing NEWS file
+  * tests: Check for orphaned layout files
+  * debian: Upgrade rust dependency
+  * layout: Gather state-related stuff together
+  * layout: Split out static data
+  * layout: Pressed buttons are now a list of indices
+  * layout: Remove unused code
+  * layout: Separate button info from state
+  * layout: Put all button state into active_buttons
+  * layout: Unbox buttons
+  * layout: Increase separation between mutable and logic
+  * layout: Increase separation between mutable and logic
+  * panel: Hardcode some debugging
+  * panel: Fix resize when reusing the window
+  * Rename LevelKeyboard to Layout
+  * event loop: Decouple event timeout from event type
+  * event loop: Decouple state type from event handler
+  * event loop: Decouple event type from handler
+  * event loop: Add descriptions
+  * event loop: Decouple event handler from concrete state
+  * test: Mark loop scheduling test for rewrite
+  * loop driver: Decouple from concrete state
+  * main: Moved event loop definition close to actor
+  * event loop: Move event handlers from event loop driver to main loop
+  * structure: Create a module for custom event loops
+  * screensaver: Catch activeness changes
+  * loops: Use Void for infinite loops
+  * popover: Able to receive screensaver events
+  * util: Add thread-safe c wrapper
+  * popover: Use thread-safe reference
+  * popover: Connect to screensaver event
+  * popover: State can be printed
+  * popover: Apply settings enabled stateto UI
+  * rust: Use 2018 eition
+  * rust: Use 2021 eition
+  * wayland: remove dead, broken init
+  * Remove dead code
+  * safety: Replace strncpy with strlcpy
+  * build: Silence overcautious warning
+  * memory: Fix undefined behaviour
+  * Rust: Restore compatibility with Debian Bookworm
+  * layersurface: Fix violations of bracketing
+  * Revert "docs: Update Cargo.lock instructions"
+  * Update Cargo.lock
+
+  [ Newbyte ]
+  * Add wide Swedish layout
+
+  [ Daniel Rusek ]
+  * Add Czech translation
+
+  [ Guido Günther ]
+  * desktop-file: Add X-GNOME-* for session management
+
+  [ Gergo Koteles ]
+  * Add Hungarian layout
+
+  [ Jürgen Benvenuti ]
+  * Update German translation
+
+  [ David96 ]
+  * Sync layersurface with Phosh
+
+  [ Hemish ]
+  * Add Hindi translation
+
+ -- Dorota Czaplejewicz <dorota.czaplejewicz@puri.sm>  Thu, 16 Feb 2023 15:35:32 +0000
+
 squeekboard (1.20.0-1) experimental; urgency=medium
 
   [ Dorota Czaplejewicz ]
