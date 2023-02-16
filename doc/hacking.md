@@ -218,20 +218,18 @@ Releases
 
 Squeekboard should get a new release every time something interesting comes in. Preferably when there are no known bugs too. People will rely on theose releases, after all.
 
-### 1. Update `Cargo.lock.newer`.
+### 1. Update `Cargo.toml`.
 
-Build squeekboard with the `newer=true` Meson flag.
+While the file is not actually used, it's a good idea to save the config in case some rare bug appears in dependencies.
 
 ```
-cd .../squeekboard-build-newer
+cd squeekboard-build
 .../squeekboard-source/cargo.sh update
 ninja test
-cp ./Cargo.lock .../squeekboard-source/Cargo.lock.newer
+cp ./Cargo.lock .../squeekboard-source
 ```
 
-Then commit the updated file.
-
-The normal `Cargo.lock` should not get updated because it targets a version of Deban that ships Cargo that can't deal with fresher packages.
+Then commit the updated `Cargo.lock`.
 
 ### 2. Choose the version number
 
