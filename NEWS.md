@@ -1,3 +1,21 @@
+1.21.0 "Expected value"
+------------------
+
+New or updated translations:
+- Hindi
+- Czech
+- German
+
+New layouts:
+- wide Swedish
+- Hungarian
+
+Changes:
+- use a custom font for gr+polytonic, where the default is unreadable
+- require newer Rust
+- fixed panel sizing when rotating
+- internal improvements.
+
 1.20.0 "PID controller"
 ------------------
 
