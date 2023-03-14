@@ -4,6 +4,7 @@ use std::rc::Rc;
 use crate::float_ord::FloatOrd;
 
 use std::borrow::Borrow;
+use std::cmp::{Ordering, PartialOrd};
 use std::hash::{ Hash, Hasher };
 use std::ops::Mul;
 
@@ -242,6 +243,34 @@ impl<U, T: Mul<U, Output=T>> Mul<Rational<U>> for Rational<T> {
     }
 }
 
+impl PartialEq for Rational<i32> {
+    fn eq(&self, other: &Self) -> bool {
+        (self.denominator as i64).saturating_mul(other.numerator as i64)
+            == (other.denominator as i64).saturating_mul(self.numerator as i64)
+    }
+}
+
+impl Eq for Rational<i32> {}
+
+impl Ord for Rational<i32> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Using 64-bit values to make overflows unlikely.
+        // If i32_max * u32_max can exceed i64_max,
+        // then this is actually PartialOrd.
+        // Saturating mul used just to avoid propagating mistakes.
+        (other.denominator as i64).saturating_mul(self.numerator as i64)
+            .cmp(
+                &(self.denominator as i64).saturating_mul(other.numerator as i64)
+             )
+    }
+}
+
+impl PartialOrd for Rational<i32> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 /// Compares pointers but not internal values of Rc
 pub struct Pointer<T>(pub Rc<T>);
 
@@ -325,6 +354,22 @@ mod tests {
         assert_eq!(
             cycle_count(5..8).take(7).collect::<Vec<_>>(),
             vec![(5, 0), (6, 0), (7, 0), (5, 1), (6, 1), (7, 1), (5, 2)]
+        );
+    }
+    
+    #[test]
+    fn check_rational_cmp() {
+        assert_eq!(
+            Rational { numerator: 1, denominator: 1 },
+            Rational { numerator: 1, denominator: 1 },
+        );
+        assert_eq!(
+            Rational { numerator: 1, denominator: 1 },
+            Rational { numerator: 2, denominator: 2 },
+        );
+        assert!(
+            Rational { numerator: 1, denominator: 1 }
+            < Rational { numerator: 2, denominator: 1 }
         );
     }
 }
