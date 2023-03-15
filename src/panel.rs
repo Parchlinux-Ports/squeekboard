@@ -256,7 +256,7 @@ impl State {
                 if output == req_output && height == req_height {(
                     State::SizeRequested{output: req_output, height: req_height},
                     Vec::new(),
-                )} else if output == req_output {
+                )} else if output == req_output {(
                     // I'm not sure about that.
                     // This could cause a busy loop,
                     // when two requests are being processed at the same time:
@@ -266,16 +266,12 @@ impl State {
                     // causing the compositor to change size to B.
                     // So better cut this short here, despite artifacts.
                     
-                    // Out of simplicty, just ignore the new request.
-                    // If that causes problems, the request in flight could be stored
-                    // for the purpose of handling it better somehow.
-                    
-                    //BUGGY
-                    (
-                        State::SizeRequested{output: req_output, height: req_height},
-                        Vec::new(),
-                     )
-                } else {(
+                    // Doing nothing means that Squeekboard will occasionally use the stale size (see test),
+                    // so instead always listen to the higher layer and request a new size.
+                    // If this causes problems, maybe count requests/configures, or track what was allocated in response to what request.
+                    State::SizeRequested{output, height},
+                    vec![Update::Resize { height }],
+                )} else {(
                     // This looks weird, but should be safe.
                     // The stack seems to handle
                     // configure events on a dead surface.
@@ -343,14 +339,22 @@ mod tests {
             output,
             height: PixelSize { pixels: 50, scale_factor: 1 },
         });
-        // what's the expected outcome here? Should the failed request be kept?
         assert_eq!(
             cmds,
-            vec![Update::RequestWidget { output, height: 50 }],
+            vec![Update::Resize { height: 50 }],
             "{:?}",
             state,
         );
         // This is too many layers of indirection, but as long as layer shell is tied to gtk widgets, there's not much to be done.
+        // The main issue is that as the outputs change, we acknowledge the wrong (maintained) size:
+        /*
+        [346947.774] wl_output@31.geometry(0, 0, 65, 130, 0, "<Unknown>", "<Unknown>", 3)
+[346948.117] wl_output@17.geometry(0, 0, 65, 130, 0, "<Unknown>", "<Unknown>", 3)
+[346948.198] zwlr_layer_surface_v1@41.configure(1709, 720, 210)
+[346948.268]  -> zwlr_layer_surface_v1@41.ack_configure(1709)
+        */
+        // TODO: check if layer_shell allows not acknowledging a configure event, and which part of squeekboard is responsible for that
+        // (there are no messages in between, so it's not PanelMgr; panel.c almost-unconditionally calls to Rust too; could it be layer-shell.c?).
         
         // event we want
         let good_state = state.clone().configure(Size { width: 50, height: 50 });
@@ -363,7 +367,7 @@ mod tests {
             },
         );
         
-        // or event we do not want
+        // or stale event we do not want
         let state = state.configure(Size { width: 50, height: 100 });
         // followed by the good one
         let state = state.configure(Size { width: 50, height: 50 });
