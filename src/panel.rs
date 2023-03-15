@@ -94,7 +94,7 @@ impl PixelSize {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 struct Size {
     width: u32,
     height: u32,
@@ -104,7 +104,7 @@ struct Size {
 /// the application asks for some size,
 /// and then receives a size that the compositor thought appropriate.
 /// Stores raw values passed to Wayland, i.e. scaled dimensions.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum State {
     Hidden,
     SizeRequested {
@@ -116,6 +116,18 @@ enum State {
         output: OutputId,
         wanted_height: u32,
         allocated: Size,
+    },
+}
+
+/// A command to send out to the next layer of processing.
+/// Here, it's the C side of the panel.
+#[derive(Debug, PartialEq)]
+enum Update {
+    Hide,
+    Resize { height: u32 },
+    RequestWidget {
+        output: OutputId,
+        height: u32,
     },
 }
 
@@ -153,7 +165,50 @@ impl Manager {
             eprintln!("Panel received configure {:?}", &size);
         }
 
-        self.state = match self.state.clone() {
+        self.state = self.state.clone().configure(size);
+
+        if self.debug {
+            eprintln!("Panel now {:?}", &self.state);
+        }
+    }
+
+    pub fn update(mgr: Wrapped<Manager>, cmd: Command) {
+        let copied = mgr.clone();
+
+        let mgr = mgr.clone_ref();
+        let mut mgr = mgr.borrow_mut();
+        
+        if mgr.debug {
+            eprintln!("Panel received {:?}", &cmd);
+        }
+        
+        let (state, updates) = mgr.state.clone().update(cmd);
+        (*mgr).state = state;
+        
+        for update in &updates {
+            unsafe {
+                match update {
+                    Update::Hide => c::panel_manager_hide(mgr.panel),
+                    Update::Resize { height }
+                        => c::panel_manager_resize(mgr.panel, *height),
+                    Update::RequestWidget{output, height}
+                        => c::panel_manager_request_widget(mgr.panel, output.0, *height, copied.clone()),
+                }
+            }
+        }
+        
+        if mgr.debug {
+            for update in &updates {
+                eprintln!("Panel updates: {:?}", &update);
+            }
+            eprintln!("Panel is now {:?}", &(*mgr).state);
+        }
+    }
+}
+
+impl State {
+    fn configure(self, size: Size) -> Self {
+         match self {
             State::Hidden => {
                 // This may happen if a hide is scheduled immediately after a show.
                 log_print!(
@@ -174,49 +229,34 @@ impl Manager {
                 wanted_height: height,
                 allocated: size,
             },
-        };
-
-        if self.debug {
-            eprintln!("Panel now {:?}", &self.state);
         }
     }
 
-    pub fn update(mgr: Wrapped<Manager>, cmd: Command) {
-        let copied = mgr.clone();
-
-        let mgr = mgr.clone_ref();
-        let mut mgr = mgr.borrow_mut();
-        
-        if mgr.debug {
-            eprintln!("Panel received {:?}", &cmd);
-        }
-
-        (*mgr).state = match (cmd, mgr.state.clone()) {
-            (Command::Hide, State::Hidden) => State::Hidden,
-            (Command::Hide, State::SizeAllocated{..}) => {
-                unsafe { c::panel_manager_hide(mgr.panel); }
-                State::Hidden
-            },
-            (Command::Hide, State::SizeRequested{..}) => {
-                unsafe { c::panel_manager_hide(mgr.panel); }
-                State::Hidden
-            },
+    fn update(self, cmd: Command) -> (Self, Vec<Update>) {
+        match (cmd, self) {
+            (Command::Hide, State::Hidden) => (State::Hidden, Vec::new()),
+            (Command::Hide, State::SizeAllocated{..}) => (
+                State::Hidden, vec![Update::Hide],
+            ),
+            (Command::Hide, State::SizeRequested{..}) => (
+                State::Hidden, vec![Update::Hide],
+            ),
             (Command::Show{output, height}, State::Hidden) => {
                 let height = height.as_scaled_ceiling();
-                if mgr.debug {
-                    eprintln!("Panel requests widget {:?}", (&output.0, &height));
-                }
-                unsafe { c::panel_manager_request_widget(mgr.panel, output.0, height, copied); }
-                State::SizeRequested{output, height}
+                (
+                    State::SizeRequested{output, height},
+                    vec![Update::RequestWidget{ output, height }],
+                )
             },
             (
                 Command::Show{output, height},
                 State::SizeRequested{output: req_output, height: req_height},
             ) => {
                 let height = height.as_scaled_ceiling();
-                if output == req_output && height == req_height {
-                    State::SizeRequested{output: req_output, height: req_height}
-                } else if output == req_output {
+                if output == req_output && height == req_height {(
+                    State::SizeRequested{output: req_output, height: req_height},
+                    Vec::new(),
+                )} else if output == req_output {
                     // I'm not sure about that.
                     // This could cause a busy loop,
                     // when two requests are being processed at the same time:
@@ -225,50 +265,115 @@ impl Manager {
                     // the other from the state wanting height B',
                     // causing the compositor to change size to B.
                     // So better cut this short here, despite artifacts.
+                    
                     // Out of simplicty, just ignore the new request.
                     // If that causes problems, the request in flight could be stored
                     // for the purpose of handling it better somehow.
-                    State::SizeRequested{output: req_output, height: req_height}
-                } else {
-                    if mgr.debug {
-                        eprintln!("Panel requests widget {:?}", (&output.0, &height));
-                    }
+                    
+                    //BUGGY
+                    (
+                        State::SizeRequested{output: req_output, height: req_height},
+                        Vec::new(),
+                     )
+                } else {(
                     // This looks weird, but should be safe.
                     // The stack seems to handle
                     // configure events on a dead surface.
-                    unsafe {
-                        c::panel_manager_hide(mgr.panel);
-                        c::panel_manager_request_widget(mgr.panel, output.0, height, copied);
-                    }
-                    State::SizeRequested{output, height}
-                }
+                    State::SizeRequested{output, height},
+                    vec![
+                        Update::Hide,
+                        Update::RequestWidget { output, height },
+                    ],
+                )}
             },
             (
                 Command::Show{output, height},
                 State::SizeAllocated{output: alloc_output, allocated, wanted_height},
             ) => {
                 let height = height.as_scaled_ceiling();
-                if output == alloc_output && height == wanted_height {
-                    State::SizeAllocated{output: alloc_output, wanted_height, allocated}
-                } else if output == alloc_output && height == allocated.height {
-                    State::SizeAllocated{output: alloc_output, wanted_height: height, allocated}
-                } else if output == alloc_output {
+                if output == alloc_output && height == wanted_height {(
+                    State::SizeAllocated{output: alloc_output, wanted_height, allocated},
+                    Vec::new(),
+                )} else if output == alloc_output && height == allocated.height {(
+                    State::SizeAllocated{output: alloc_output, wanted_height: height, allocated},
+                    Vec::new(),
+                )} else if output == alloc_output {(
                     // Should *all* other heights cause a resize?
                     // What about those between wanted and allocated?
-                    unsafe { c::panel_manager_resize(mgr.panel, height); }
-                    State::SizeRequested{output, height}
-                } else {
-                    unsafe {
-                        c::panel_manager_hide(mgr.panel);
-                        c::panel_manager_request_widget(mgr.panel, output.0, height, copied);
-                    }
-                    State::SizeRequested{output, height}
-                }
+                    State::SizeRequested{output, height},
+                    vec![Update::Resize{height}],
+                )} else {(
+                    State::SizeRequested{output, height},
+                    vec![
+                        Update::Hide,
+                        Update::RequestWidget{output, height},
+                    ]
+                   )}
             },
-        };
-        
-        if mgr.debug {
-            eprintln!("Panel is now {:?}", &(*mgr).state);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::outputs::c::WlOutput;
+    
+    #[test]
+    fn resize_before_configured() {
+        // allow to make typing fields easier
+        #[allow(non_upper_case_globals)]
+        const output: OutputId = OutputId(WlOutput::dummy());
+        
+        let state = State::Hidden;
+        
+        // Initial show
+        let (state, cmds) = state.update(Command::Show {
+            output,
+            height: PixelSize { pixels: 100, scale_factor: 1 },
+        });
+        assert_eq!(
+            cmds,
+            vec![Update::RequestWidget { output, height: 100 }],
+        );
+        // layer shell requests a resize
+
+        // but another show comes before first can be confirmed
+        let (state, cmds) = dbg!(state).update(Command::Show {
+            output,
+            height: PixelSize { pixels: 50, scale_factor: 1 },
+        });
+        // what's the expected outcome here? Should the failed request be kept?
+        assert_eq!(
+            cmds,
+            vec![Update::RequestWidget { output, height: 50 }],
+            "{:?}",
+            state,
+        );
+        // This is too many layers of indirection, but as long as layer shell is tied to gtk widgets, there's not much to be done.
+        
+        // event we want
+        let good_state = state.clone().configure(Size { width: 50, height: 50 });
+        assert_eq!(
+            good_state,
+            State::SizeAllocated {
+                output,
+                wanted_height: 50,
+                allocated: Size { width: 50, height: 50 },
+            },
+        );
+        
+        // or event we do not want
+        let state = state.configure(Size { width: 50, height: 100 });
+        // followed by the good one
+        let state = state.configure(Size { width: 50, height: 50 });
+        assert_eq!(
+            state,
+            State::SizeAllocated {
+                output,
+                wanted_height: 50,
+                allocated: Size { width: 50, height: 50 },
+            },
+        );
     }
 }

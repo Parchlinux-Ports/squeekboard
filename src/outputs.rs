@@ -29,8 +29,13 @@ pub mod c {
     pub struct WlOutput(*const c_void);
 
     impl WlOutput {
-        fn null() -> Self {
+        const fn null() -> Self {
             Self(ptr::null())
+        }
+        
+        #[cfg(test)]
+        pub const fn dummy() -> Self {
+            Self::null()
         }
     }
 
