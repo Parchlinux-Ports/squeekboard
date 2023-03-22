@@ -391,14 +391,14 @@ Outcome:
                 };
                 let ideal_panel_height = Rational {
                     numerator: ideal_height_px as i32,
-                    denominator: dbg!(px_size.width),
+                    denominator: px_size.width,
                 };
                 // Reduce height to match what the layout can fill.
                 // For this, we need to guess if normal or wide will be picked.
                 // This must match `eek_gtk_keyboard.c::get_type`.
                 // TODO: query layout database and choose one directly
                 let (arrangement, height_as_widths) = {
-                    if max_wide_height < dbg!(ideal_panel_height) {(
+                    if max_wide_height < ideal_panel_height {(
                         ArrangementKind::Base,
                         Rational {
                             numerator: 210,
@@ -412,7 +412,7 @@ Outcome:
 
                 let height
                     = cmp::min(
-                        dbg!(ideal_height_px),
+                        ideal_height_px,
                         (height_as_widths * px_size.width as i32).ceil() as u32,
                     );
 
