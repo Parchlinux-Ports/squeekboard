@@ -1,3 +1,14 @@
+1.22.0 "Superposition"
+------------------
+
+New or updated translations:
+- Basque
+
+Changes:
+- fixed panel sizing when scaling
+- fixed panel sizing when rotating
+- fixed Dvorak terminal layout
+
 1.21.0 "Expected value"
 ------------------
 

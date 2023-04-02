@@ -1,3 +1,20 @@
+squeekboard (1.22.0-1) experimental; urgency=medium
+
+  [ Asier Sarasua Garmendia ]
+  * Add Basque translation
+
+  [ Dorota Czaplejewicz ]
+  * state: Make size independent of scaling factor
+  * cleanup: Remove debug prints
+  * tests: Make panel manager modifications pure
+  * panel: Fix sizing on output reconfiguration
+  * Update deps
+
+  [ Undef ]
+  * layout: fix uppercase dvorak terminal mode
+
+ -- Dorota Czaplejewicz <dorota.czaplejewicz@puri.sm>  Sat, 01 Apr 2023 13:46:23 +0000
+
 squeekboard (1.21.0-1) experimental; urgency=medium
 
   [ Dorota Czaplejewicz ]
