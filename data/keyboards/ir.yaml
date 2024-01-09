@@ -25,7 +25,7 @@ views:
     symbols:
         - "~ ` | · √ π τ ÷ × ¶"
         - "© ® £ € ¥ ^ ° * { }"
-        - "show_numbers_from_symbols   \\ / < > = [ ]  BackSpace"
+        - "show_numbers_from_symbols ‌ \\ / < > = [ ]  BackSpace"
         - "show_letters preferences         space        period Return"
 
 buttons:

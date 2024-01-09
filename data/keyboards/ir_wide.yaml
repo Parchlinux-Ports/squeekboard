@@ -16,7 +16,7 @@ views:
         - "پ { } [ ] ّ   َ   ِ  ُ چ"
         - "ؤ‌ ئ ي‌ إ أ آ ة‌ » « گ"
         - "Shift_L  ك ٓ ژ ء > < ‌ BackSpace"
-        - "show_numbers preferences         space     ‌   period Return"
+        - "show_numbers preferences         space         period Return"
     numbers:
         - "۱ ۲ ۳ ۴ ۵ ۶ ۷ ۸ ۹ ۰"
         - "@ # ﷼ ٪ & - _ + ( )"
@@ -25,7 +25,7 @@ views:
     symbols:
         - "~ ` | · √ π τ ÷ × ¶"
         - "© ® £ € ¥ ^ ° * { }"
-        - "show_numbers_from_symbols   \\ / < > = [ ]  BackSpace"
+        - "show_numbers_from_symbols ‌ \\ / < > = [ ]  BackSpace"
         - "show_letters preferences         space        period Return"
 
 buttons:
