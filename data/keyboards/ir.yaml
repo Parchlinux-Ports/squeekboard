@@ -9,17 +9,17 @@ outlines:
 views:
     base:
         - "ض ص ث ق ف غ ع ه خ ح ج"
-        - "ش س ی ب ل ا ت ن م ک"
-        - "Shift_L   ظ ط ز ر ذ د و  BackSpace"
+        - "ش س ی ب ل ا ت ن م ک گ"
+        - "Shift_L  پ ظ ط ز ر ذ د و  BackSpace"
         - "show_numbers preferences         space        period Return"
     upper:
         - "پ { } [ ] ّ   َ   ِ  ُ چ"
         - "ؤ‌ ئ ي‌ إ أ آ ة‌ » « گ"
-        - "Shift_L  ك ٓ ژ ء > < ؟  BackSpace"
+        - "Shift_L  ك ٓ ژ ء > < ‌  BackSpace"
         - "show_numbers preferences         space        period Return"
     numbers:
         - "۱ ۲ ۳ ۴ ۵ ۶ ۷ ۸ ۹ ۰"
-        - "@ # ﷼ % & - _ + ( )"
+        - "@ # ﷼ ٪ & - _ + ( )"
         - "show_symbols   ، \" ' colon ؛ ! ؟  BackSpace"
         - "show_letters preferences         space        period Return"
     symbols:
