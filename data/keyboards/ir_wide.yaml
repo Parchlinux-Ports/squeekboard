@@ -10,22 +10,22 @@ views:
     base:
         - "ض ص ث ق ف غ ع ه خ ح ج"
         - "ش س ی ب ل ا ت ن م ک گ"
-        - "Shift_L   ظ ط ز ر ذ پ د و  BackSpace"
+        - "Shift_L  پ ظ ط ز ر ذ د و  BackSpace"
         - "show_numbers preferences         space        period Return"
     upper:
         - "پ { } [ ] ّ   َ   ِ  ُ چ"
         - "ؤ‌ ئ ي‌ إ أ آ ة‌ » « گ"
-        - "Shift_L  ك ٓ ژ ء > < ‌ BackSpace"
-        - "show_numbers preferences         space         period Return"
+        - "Shift_L  ك ٓ ژ ء > < ‌  BackSpace"
+        - "show_numbers preferences         space        period Return"
     numbers:
         - "۱ ۲ ۳ ۴ ۵ ۶ ۷ ۸ ۹ ۰"
         - "@ # ﷼ ٪ & - _ + ( )"
-        - "show_symbols   ، \٫ ٬ ' colon ؛ ! ؟  BackSpace"
+        - "show_symbols   ، \" ' colon ؛ ! ؟  BackSpace"
         - "show_letters preferences         space        period Return"
     symbols:
         - "~ ` | · √ π τ ÷ × ¶"
         - "© ® £ € ¥ ^ ° * { }"
-        - "show_numbers_from_symbols ‌ \\ / < > = [ ]  BackSpace"
+        - "show_numbers_from_symbols   \\ / < > = [ ]  BackSpace"
         - "show_letters preferences         space        period Return"
 
 buttons:
@@ -39,9 +39,9 @@ buttons:
     BackSpace:
         outline: "altline"
         icon: "edit-clear-symbolic"
-        action: erase
+        action: "erase"
     preferences:
-        action: show_prefs
+        action: "show_prefs"
         outline: "special"
         icon: "keyboard-mode-symbolic"
     show_numbers:
@@ -64,7 +64,7 @@ buttons:
             set_view: "symbols"
         outline: "altline"
         label: "*/="
-    period:
+    ".":
         outline: "special"
         text: "."
     space:
