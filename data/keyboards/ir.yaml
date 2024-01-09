@@ -20,7 +20,7 @@ views:
     numbers:
         - "۱ ۲ ۳ ۴ ۵ ۶ ۷ ۸ ۹ ۰"
         - "@ # ﷼ % & - _ + ( )"
-        - "show_symbols   , \" ' colon ؛ ! ?  BackSpace"
+        - "show_symbols   ، \" ' colon ؛ ! ؟  BackSpace"
         - "show_letters preferences         space        period Return"
     symbols:
         - "~ ` | · √ π τ ÷ × ¶"
