@@ -10,8 +10,8 @@ views:
     base:
         - "ض ص ث ق ف غ ع ه خ ح ج"
         - "ش س ی ب ل ا ت ن م ک گ"
-        - "Shift_L  پ ظ ط ز ر ذ د و  BackSpace"
-        - "show_numbers preferences         space        period Return"
+        - "Shift_L  ظ ط ز ر ذ پ د و  BackSpace"
+        - "show_numbers preferences         space     zwnj period Return"
     upper:
         - "پ { } [ ] ّ   َ   ِ  ُ چ"
         - "ؤ‌ ئ ي‌ إ أ آ ة‌ » « گ"
@@ -74,5 +74,8 @@ buttons:
         outline: "wide"
         icon: "key-enter"
         keysym: "Return"
+    zwnj:
+        icon: "object-flip-vertical-symbolic"
+        text: "‌"
     colon:
         text: ":"
